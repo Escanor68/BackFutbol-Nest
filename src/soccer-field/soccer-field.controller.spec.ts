@@ -16,13 +16,35 @@ describe('SoccerFieldController', () => {
     getNearbyFields: jest.fn(),
   };
 
+  const mockField = {
+    id: 1,
+    name: 'Test Field',
+    address: 'Test Address',
+    latitude: 40.7128,
+    longitude: -74.0060,
+    pricePerHour: 50.00,
+    businessHours: [
+      { day: 1, openTime: '09:00', closeTime: '22:00' }
+    ],
+  };
+
+  const mockAvailability = [
+    { startTime: '10:00', endTime: '11:00' },
+    { startTime: '11:00', endTime: '12:00' },
+  ];
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SoccerFieldController],
       providers: [
         {
           provide: SoccerFieldService,
-          useValue: mockSoccerFieldService,
+          useValue: {
+            findAll: jest.fn().mockResolvedValue([mockField]),
+            findOne: jest.fn().mockResolvedValue(mockField),
+            findNearby: jest.fn().mockResolvedValue([mockField]),
+            getAvailability: jest.fn().mockResolvedValue(mockAvailability),
+          },
         },
       ],
     }).compile();
@@ -173,6 +195,38 @@ describe('SoccerFieldController', () => {
     it('should handle service errors', async () => {
       mockSoccerFieldService.getNearbyFields.mockRejectedValue(new Error('Service error'));
       await expect(controller.getNearbyFields(1, 1)).rejects.toThrow();
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return an array of fields', async () => {
+      const result = await controller.findAll();
+      expect(result).toEqual([mockField]);
+      expect(service.findAll).toHaveBeenCalled();
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a single field', async () => {
+      const result = await controller.findOne(1);
+      expect(result).toEqual(mockField);
+      expect(service.findOne).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('findNearby', () => {
+    it('should return nearby fields', async () => {
+      const result = await controller.findNearby(40.7128, -74.0060, 10);
+      expect(result).toEqual([mockField]);
+      expect(service.findNearby).toHaveBeenCalledWith(40.7128, -74.0060, 10);
+    });
+  });
+
+  describe('getAvailability', () => {
+    it('should return available time slots', async () => {
+      const result = await controller.getAvailability(1, '2024-03-20');
+      expect(result).toEqual(mockAvailability);
+      expect(service.getAvailability).toHaveBeenCalledWith(1, expect.any(Date));
     });
   });
 }); 

@@ -5,10 +5,14 @@ import { SoccerFieldService } from './soccer-field.service';
 import { SoccerField } from './entities/soccer-field.entity';
 import { BadRequestException, ConflictException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { CreateSoccerFieldDto } from './dto/create-soccer-field.dto';
+import { Field } from './entities/field.entity';
+import { Booking } from '../bookings/entities/booking.entity';
 
 describe('SoccerFieldService', () => {
   let service: SoccerFieldService;
   let repository: Repository<SoccerField>;
+  let fieldRepository: Repository<Field>;
+  let bookingRepository: Repository<Booking>;
 
   const mockRepository = {
     save: jest.fn(),
@@ -22,6 +26,29 @@ describe('SoccerFieldService', () => {
     })),
   };
 
+  const mockField = {
+    id: 1,
+    name: 'Test Field',
+    address: 'Test Address',
+    latitude: 40.7128,
+    longitude: -74.0060,
+    pricePerHour: 50.00,
+    businessHours: [
+      { day: 1, openTime: '09:00', closeTime: '22:00' }
+    ],
+    description: 'Test Description',
+    imageUrl: 'test.jpg',
+  };
+
+  const mockBooking = {
+    id: 1,
+    field: mockField,
+    date: new Date('2024-03-20'),
+    startTime: '10:00',
+    endTime: '11:00',
+    status: 'confirmed',
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -30,11 +57,30 @@ describe('SoccerFieldService', () => {
           provide: getRepositoryToken(SoccerField),
           useValue: mockRepository,
         },
+        {
+          provide: getRepositoryToken(Field),
+          useValue: {
+            find: jest.fn().mockResolvedValue([mockField]),
+            findOne: jest.fn().mockResolvedValue(mockField),
+            createQueryBuilder: jest.fn(() => ({
+              where: jest.fn().mockReturnThis(),
+              getMany: jest.fn().mockResolvedValue([mockField]),
+            })),
+          },
+        },
+        {
+          provide: getRepositoryToken(Booking),
+          useValue: {
+            find: jest.fn().mockResolvedValue([mockBooking]),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<SoccerFieldService>(SoccerFieldService);
     repository = module.get<Repository<SoccerField>>(getRepositoryToken(SoccerField));
+    fieldRepository = module.get<Repository<Field>>(getRepositoryToken(Field));
+    bookingRepository = module.get<Repository<Booking>>(getRepositoryToken(Booking));
   });
 
   afterEach(() => {
@@ -278,6 +324,55 @@ describe('SoccerFieldService', () => {
     it('should handle database errors', async () => {
       mockRepository.createQueryBuilder().getMany.mockRejectedValue(new Error('Database error'));
       await expect(service.getNearbyFields(1, 1)).rejects.toThrow();
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return an array of fields', async () => {
+      const result = await service.findAll();
+      expect(result).toEqual([mockField]);
+      expect(fieldRepository.find).toHaveBeenCalled();
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a single field', async () => {
+      const result = await service.findOne(1);
+      expect(result).toEqual(mockField);
+      expect(fieldRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 1 },
+        relations: ['bookings'],
+      });
+    });
+
+    it('should throw NotFoundException when field not found', async () => {
+      jest.spyOn(fieldRepository, 'findOne').mockResolvedValue(null);
+      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('findNearby', () => {
+    it('should return nearby fields', async () => {
+      const result = await service.findNearby(40.7128, -74.0060, 10);
+      expect(result).toEqual([mockField]);
+    });
+  });
+
+  describe('getAvailability', () => {
+    it('should return available time slots', async () => {
+      const date = new Date('2024-03-20');
+      const result = await service.getAvailability(1, date);
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should return empty array when no business hours for day', async () => {
+      const date = new Date('2024-03-24'); // Sunday
+      jest.spyOn(service as any, 'findOne').mockResolvedValue({
+        ...mockField,
+        businessHours: [{ day: 1, openTime: '09:00', closeTime: '22:00' }],
+      });
+      const result = await service.getAvailability(1, date);
+      expect(result).toEqual([]);
     });
   });
 }); 
