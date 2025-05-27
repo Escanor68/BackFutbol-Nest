@@ -1,12 +1,13 @@
-import { Controller, Post, Get, Body, Query, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, UseGuards, ValidationPipe, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SoccerFieldService } from './soccer-field.service';
 import { CreateSoccerFieldDto } from './dto/create-soccer-field.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SoccerField } from './entities/soccer-field.entity';
+import { ParseIntPipe } from '@nestjs/common';
 
 @ApiTags('soccer-fields')
-@Controller('api/v1/soccer-fields')
+@Controller('fields')
 export class SoccerFieldController {
   constructor(private readonly soccerFieldService: SoccerFieldService) {}
 
@@ -20,10 +21,31 @@ export class SoccerFieldController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get fields by owner' })
-  @ApiResponse({ status: 200, type: [SoccerField] })
-  async getFieldsByOwner(@Query('userField') userField: number): Promise<SoccerField[]> {
-    return this.soccerFieldService.getFieldsByOwner(userField);
+  findAll() {
+    return this.soccerFieldService.findAll();
+  }
+
+  @Get('nearby')
+  findNearby(
+    @Query('lat') lat: number,
+    @Query('lng') lng: number,
+    @Query('radius') radius: number,
+  ) {
+    return this.soccerFieldService.findNearby(lat, lng, radius);
+  }
+
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.soccerFieldService.findOne(id);
+  }
+
+  @Get(':id/availability')
+  getAvailability(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('date') dateStr: string,
+  ) {
+    const date = new Date(dateStr);
+    return this.soccerFieldService.getAvailability(id, date);
   }
 
   @Post('reserve')
@@ -56,16 +78,5 @@ export class SoccerFieldController {
   @ApiResponse({ status: 200, description: 'Field released successfully' })
   async releaseField(@Body('id') id: string): Promise<void> {
     await this.soccerFieldService.releaseField(id);
-  }
-
-  @Get('nearby')
-  @ApiOperation({ summary: 'Get nearby fields' })
-  @ApiResponse({ status: 200, type: [SoccerField] })
-  async getNearbyFields(
-    @Query('latitude') latitude: number,
-    @Query('longitude') longitude: number,
-    @Query('radius') radius?: number,
-  ): Promise<SoccerField[]> {
-    return this.soccerFieldService.getNearbyFields(latitude, longitude, radius);
   }
 } 

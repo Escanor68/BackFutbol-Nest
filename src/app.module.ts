@@ -5,6 +5,12 @@ import { SoccerFieldModule } from './soccer-field/soccer-field.module';
 import { AuthModule } from './auth/auth.module';
 import { SoccerField } from './soccer-field/entities/soccer-field.entity';
 import { EventsGateway } from './events/events.gateway';
+import { Field } from './soccer-field/entities/field.entity';
+import { Booking } from './bookings/entities/booking.entity';
+import { SoccerFieldController } from './soccer-field/soccer-field.controller';
+import { SoccerFieldService } from './soccer-field/soccer-field.service';
+import { BookingController } from './bookings/booking.controller';
+import { BookingService } from './bookings/booking.service';
 
 @Module({
   imports: [
@@ -26,9 +32,11 @@ import { EventsGateway } from './events/events.gateway';
       }),
       inject: [ConfigService],
     }),
+    TypeOrmModule.forFeature([Field, Booking]),
     SoccerFieldModule,
     AuthModule,
   ],
-  providers: [EventsGateway],
+  controllers: [AppController, SoccerFieldController, BookingController],
+  providers: [EventsGateway, SoccerFieldService, BookingService],
 })
 export class AppModule {}

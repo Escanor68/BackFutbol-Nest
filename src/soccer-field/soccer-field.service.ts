@@ -3,12 +3,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SoccerField } from './entities/soccer-field.entity';
 import { CreateSoccerFieldDto } from './dto/create-soccer-field.dto';
+import { Field } from './entities/field.entity';
+import { Booking } from '../bookings/entities/booking.entity';
 
 @Injectable()
 export class SoccerFieldService {
   constructor(
     @InjectRepository(SoccerField)
     private readonly soccerFieldRepository: Repository<SoccerField>,
+    @InjectRepository(Field)
+    private fieldRepository: Repository<Field>,
+    @InjectRepository(Booking)
+    private bookingRepository: Repository<Booking>,
   ) {}
 
   async createShifts(createDto: CreateSoccerFieldDto): Promise<void> {
@@ -149,5 +155,84 @@ export class SoccerFieldService {
 
   private formatTime(date: Date): string {
     return date.toTimeString().slice(0, 5);
+  }
+
+  async findAll() {
+    return this.fieldRepository.find();
+  }
+
+  async findOne(id: number) {
+    const field = await this.fieldRepository.findOne({
+      where: { id },
+      relations: ['bookings'],
+    });
+
+    if (!field) {
+      throw new NotFoundException(`Field with ID ${id} not found`);
+    }
+
+    return field;
+  }
+
+  async findNearby(lat: number, lng: number, radius: number) {
+    // Using Haversine formula in SQL
+    const fields = await this.fieldRepository
+      .createQueryBuilder('field')
+      .where(
+        `(6371 * acos(cos(radians(:lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(latitude)))) <= :radius`,
+        { lat, lng, radius },
+      )
+      .getMany();
+
+    return fields;
+  }
+
+  async getAvailability(fieldId: number, date: Date) {
+    const field = await this.findOne(fieldId);
+    const bookings = await this.bookingRepository.find({
+      where: {
+        field: { id: fieldId },
+        date: date,
+        status: 'confirmed',
+      },
+    });
+
+    // Get business hours for the specified day
+    const dayOfWeek = date.getDay();
+    const businessHours = field.businessHours.find(bh => bh.day === dayOfWeek);
+    
+    if (!businessHours) {
+      return [];
+    }
+
+    // Generate all possible time slots
+    const timeSlots = this.generateTimeSlots(businessHours.openTime, businessHours.closeTime);
+    
+    // Filter out booked slots
+    return timeSlots.filter(slot => {
+      return !bookings.some(booking => 
+        (slot.startTime >= booking.startTime && slot.startTime < booking.endTime) ||
+        (slot.endTime > booking.startTime && slot.endTime <= booking.endTime)
+      );
+    });
+  }
+
+  private generateTimeSlots(openTime: string, closeTime: string) {
+    const slots = [];
+    let currentTime = new Date(`2000-01-01T${openTime}`);
+    const endTime = new Date(`2000-01-01T${closeTime}`);
+
+    while (currentTime < endTime) {
+      const startTime = currentTime.toTimeString().slice(0, 5);
+      currentTime.setHours(currentTime.getHours() + 1);
+      const endTimeSlot = currentTime.toTimeString().slice(0, 5);
+
+      slots.push({
+        startTime,
+        endTime: endTimeSlot,
+      });
+    }
+
+    return slots;
   }
 } 
