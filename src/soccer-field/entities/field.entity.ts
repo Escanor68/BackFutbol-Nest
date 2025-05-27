@@ -1,5 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Booking } from '../../bookings/entities/booking.entity';
+import { Review } from '../entities/review.entity';
+import { SpecialHours } from '../entities/special-hours.entity';
 
 @Entity()
 export class Field {
@@ -34,6 +36,48 @@ export class Field {
   @Column({ nullable: true })
   imageUrl: string;
 
+  @Column()
+  surface: string;
+
+  @Column({ default: false })
+  hasLighting: boolean;
+
+  @Column({ default: false })
+  isIndoor: boolean;
+
+  @Column('simple-array', { nullable: true })
+  amenities: string[];
+
+  @Column({ nullable: true })
+  maxPlayers: number;
+
+  @Column('simple-array', { nullable: true })
+  rules: string[];
+
+  @Column({ nullable: true })
+  cancellationPolicy: string;
+
+  @Column('decimal', { precision: 3, scale: 2, default: 0 })
+  averageRating: number;
+
+  @Column({ default: 0 })
+  reviewCount: number;
+
   @OneToMany(() => Booking, booking => booking.field)
   bookings: Booking[];
+
+  @OneToMany(() => Review, review => review.field)
+  reviews: Review[];
+
+  @OneToMany(() => SpecialHours, specialHours => specialHours.field)
+  specialHours: SpecialHours[];
+
+  @Column()
+  ownerId: number;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 } 

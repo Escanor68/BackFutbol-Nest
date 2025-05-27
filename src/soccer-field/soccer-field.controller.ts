@@ -5,6 +5,10 @@ import { CreateSoccerFieldDto } from './dto/create-soccer-field.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SoccerField } from './entities/soccer-field.entity';
 import { ParseIntPipe } from '@nestjs/common';
+import { CreateFieldDto } from './dto/create-field.dto';
+import { SearchFieldsDto } from './dto/search-fields.dto';
+import { CreateReviewDto } from './dto/create-review.dto';
+import { CreateSpecialHoursDto } from './dto/create-special-hours.dto';
 
 @ApiTags('soccer-fields')
 @Controller('fields')
@@ -78,5 +82,43 @@ export class SoccerFieldController {
   @ApiResponse({ status: 200, description: 'Field released successfully' })
   async releaseField(@Body('id') id: string): Promise<void> {
     await this.soccerFieldService.releaseField(id);
+  }
+
+  @Get('search')
+  async searchFields(@Query() searchDto: SearchFieldsDto) {
+    return this.soccerFieldService.searchFields(searchDto);
+  }
+
+  @Post(':id/reviews')
+  @UseGuards(JwtAuthGuard)
+  async createReview(
+    @Param('id') id: number,
+    @Body() createReviewDto: CreateReviewDto,
+  ) {
+    return this.soccerFieldService.createReview(id, createReviewDto);
+  }
+
+  @Get('owner/:ownerId/statistics')
+  @UseGuards(JwtAuthGuard)
+  async getFieldStatistics(@Param('ownerId') ownerId: number) {
+    return this.soccerFieldService.getFieldStatistics(ownerId);
+  }
+
+  @Post(':id/special-hours')
+  @UseGuards(JwtAuthGuard)
+  async createSpecialHours(
+    @Param('id') id: number,
+    @Body() createSpecialHoursDto: CreateSpecialHoursDto,
+  ) {
+    return this.soccerFieldService.createSpecialHours(id, createSpecialHoursDto);
+  }
+
+  @Get(':id/special-hours')
+  async getSpecialHours(
+    @Param('id') id: number,
+    @Query('startDate') startDate: Date,
+    @Query('endDate') endDate: Date,
+  ) {
+    return this.soccerFieldService.getSpecialHours(id, startDate, endDate);
   }
 } 

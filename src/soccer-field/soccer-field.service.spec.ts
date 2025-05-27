@@ -7,12 +7,16 @@ import { BadRequestException, ConflictException, NotFoundException, InternalServ
 import { CreateSoccerFieldDto } from './dto/create-soccer-field.dto';
 import { Field } from './entities/field.entity';
 import { Booking } from '../bookings/entities/booking.entity';
+import { Review } from './entities/review.entity';
+import { SpecialHours } from './entities/special-hours.entity';
 
 describe('SoccerFieldService', () => {
   let service: SoccerFieldService;
   let repository: Repository<SoccerField>;
   let fieldRepository: Repository<Field>;
   let bookingRepository: Repository<Booking>;
+  let reviewRepository: Repository<Review>;
+  let specialHoursRepository: Repository<SpecialHours>;
 
   const mockRepository = {
     save: jest.fn(),
@@ -38,6 +42,13 @@ describe('SoccerFieldService', () => {
     ],
     description: 'Test Description',
     imageUrl: 'test.jpg',
+    surface: 'grass',
+    hasLighting: true,
+    isIndoor: false,
+    averageRating: 4.5,
+    reviewCount: 2,
+    bookings: [],
+    reviews: [],
   };
 
   const mockBooking = {
@@ -74,6 +85,22 @@ describe('SoccerFieldService', () => {
             find: jest.fn().mockResolvedValue([mockBooking]),
           },
         },
+        {
+          provide: getRepositoryToken(Review),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(SpecialHours),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -81,6 +108,8 @@ describe('SoccerFieldService', () => {
     repository = module.get<Repository<SoccerField>>(getRepositoryToken(SoccerField));
     fieldRepository = module.get<Repository<Field>>(getRepositoryToken(Field));
     bookingRepository = module.get<Repository<Booking>>(getRepositoryToken(Booking));
+    reviewRepository = module.get<Repository<Review>>(getRepositoryToken(Review));
+    specialHoursRepository = module.get<Repository<SpecialHours>>(getRepositoryToken(SpecialHours));
   });
 
   afterEach(() => {
@@ -373,6 +402,113 @@ describe('SoccerFieldService', () => {
       });
       const result = await service.getAvailability(1, date);
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('searchFields', () => {
+    it('should return fields based on search criteria', async () => {
+      const searchDto = {
+        minPrice: 50,
+        maxPrice: 150,
+        surface: 'grass',
+        hasLighting: true,
+      };
+
+      const result = await service.searchFields(searchDto);
+      expect(result).toEqual([mockField]);
+    });
+  });
+
+  describe('createReview', () => {
+    it('should create a review and update field ratings', async () => {
+      const createReviewDto = {
+        userId: 1,
+        userName: 'Test User',
+        rating: 5,
+        comment: 'Great field!',
+      };
+
+      jest.spyOn(reviewRepository, 'create').mockReturnValue({
+        ...createReviewDto,
+        id: '1',
+        field: mockField,
+        createdAt: new Date(),
+      } as Review);
+
+      jest.spyOn(reviewRepository, 'find').mockResolvedValue([
+        { rating: 4 },
+        { rating: 5 },
+      ] as Review[]);
+
+      const result = await service.createReview(1, createReviewDto);
+      expect(result).toBeDefined();
+      expect(fieldRepository.save).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException for non-existent field', async () => {
+      jest.spyOn(fieldRepository, 'findOne').mockResolvedValue(null);
+
+      await expect(service.createReview(999, {
+        userId: 1,
+        userName: 'Test User',
+        rating: 5,
+        comment: 'Great field!',
+      })).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getFieldStatistics', () => {
+    it('should return statistics for owner fields', async () => {
+      const mockFieldWithStats = {
+        ...mockField,
+        bookings: [
+          { totalPrice: 100 },
+          { totalPrice: 150 },
+        ],
+      };
+
+      jest.spyOn(fieldRepository, 'find').mockResolvedValue([mockFieldWithStats]);
+
+      const result = await service.getFieldStatistics(1);
+      expect(result).toBeDefined();
+      expect(result[0].totalBookings).toBe(2);
+      expect(result[0].revenue).toBe(250);
+    });
+  });
+
+  describe('special hours', () => {
+    it('should create special hours for a field', async () => {
+      const createSpecialHoursDto = {
+        date: new Date(),
+        isClosed: true,
+        reason: 'Maintenance',
+      };
+
+      jest.spyOn(specialHoursRepository, 'create').mockReturnValue({
+        ...createSpecialHoursDto,
+        id: 1,
+        field: mockField,
+      } as SpecialHours);
+
+      const result = await service.createSpecialHours(1, createSpecialHoursDto);
+      expect(result).toBeDefined();
+      expect(specialHoursRepository.save).toHaveBeenCalled();
+    });
+
+    it('should get special hours for a date range', async () => {
+      const startDate = new Date();
+      const endDate = new Date();
+      
+      jest.spyOn(specialHoursRepository, 'find').mockResolvedValue([{
+        id: 1,
+        date: new Date(),
+        isClosed: true,
+        reason: 'Maintenance',
+      }] as SpecialHours[]);
+
+      const result = await service.getSpecialHours(1, startDate, endDate);
+      expect(result).toBeDefined();
+      expect(result.length).toBe(1);
     });
   });
 }); 

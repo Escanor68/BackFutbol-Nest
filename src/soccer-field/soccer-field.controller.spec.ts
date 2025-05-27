@@ -3,6 +3,9 @@ import { SoccerFieldController } from './soccer-field.controller';
 import { SoccerFieldService } from './soccer-field.service';
 import { CreateSoccerFieldDto } from './dto/create-soccer-field.dto';
 import { BadRequestException, NotFoundException, ValidationPipe } from '@nestjs/common';
+import { SearchFieldsDto } from './dto/search-fields.dto';
+import { CreateReviewDto } from './dto/create-review.dto';
+import { CreateSpecialHoursDto } from './dto/create-special-hours.dto';
 
 describe('SoccerFieldController', () => {
   let controller: SoccerFieldController;
@@ -14,6 +17,11 @@ describe('SoccerFieldController', () => {
     reserveField: jest.fn(),
     releaseField: jest.fn(),
     getNearbyFields: jest.fn(),
+    searchFields: jest.fn(),
+    createReview: jest.fn(),
+    getFieldStatistics: jest.fn(),
+    createSpecialHours: jest.fn(),
+    getSpecialHours: jest.fn(),
   };
 
   const mockField = {
@@ -26,6 +34,11 @@ describe('SoccerFieldController', () => {
     businessHours: [
       { day: 1, openTime: '09:00', closeTime: '22:00' }
     ],
+    surface: 'grass',
+    hasLighting: true,
+    isIndoor: false,
+    averageRating: 4.5,
+    reviewCount: 2,
   };
 
   const mockAvailability = [
@@ -44,6 +57,25 @@ describe('SoccerFieldController', () => {
             findOne: jest.fn().mockResolvedValue(mockField),
             findNearby: jest.fn().mockResolvedValue([mockField]),
             getAvailability: jest.fn().mockResolvedValue(mockAvailability),
+            searchFields: jest.fn().mockResolvedValue([mockField]),
+            getFieldStatistics: jest.fn().mockResolvedValue([{
+              fieldId: 1,
+              fieldName: 'Test Field',
+              totalBookings: 10,
+              averageRating: 4.5,
+              reviewCount: 5,
+              revenue: 1000,
+            }]),
+            createSpecialHours: jest.fn().mockResolvedValue({
+              id: 1,
+              date: new Date(),
+              isClosed: true,
+            }),
+            getSpecialHours: jest.fn().mockResolvedValue([{
+              id: 1,
+              date: new Date(),
+              isClosed: true,
+            }]),
           },
         },
       ],
@@ -227,6 +259,68 @@ describe('SoccerFieldController', () => {
       const result = await controller.getAvailability(1, '2024-03-20');
       expect(result).toEqual(mockAvailability);
       expect(service.getAvailability).toHaveBeenCalledWith(1, expect.any(Date));
+    });
+  });
+
+  describe('searchFields', () => {
+    it('should return fields based on search criteria', async () => {
+      const searchDto: SearchFieldsDto = {
+        minPrice: 50,
+        maxPrice: 150,
+        surface: 'grass',
+        hasLighting: true,
+      };
+
+      const result = await controller.searchFields(searchDto);
+      expect(result).toEqual([mockField]);
+      expect(service.searchFields).toHaveBeenCalledWith(searchDto);
+    });
+  });
+
+  describe('createReview', () => {
+    it('should create a review for a field', async () => {
+      const createReviewDto: CreateReviewDto = {
+        userId: 1,
+        userName: 'Test User',
+        rating: 5,
+        comment: 'Great field!',
+      };
+
+      const result = await controller.createReview(1, createReviewDto);
+      expect(result).toBeDefined();
+      expect(service.createReview).toHaveBeenCalledWith(1, createReviewDto);
+    });
+  });
+
+  describe('getFieldStatistics', () => {
+    it('should return statistics for owner fields', async () => {
+      const result = await controller.getFieldStatistics(1);
+      expect(result).toBeDefined();
+      expect(service.getFieldStatistics).toHaveBeenCalledWith(1);
+      expect(result[0].totalBookings).toBe(10);
+    });
+  });
+
+  describe('special hours', () => {
+    it('should create special hours for a field', async () => {
+      const createSpecialHoursDto: CreateSpecialHoursDto = {
+        date: new Date(),
+        isClosed: true,
+        reason: 'Maintenance',
+      };
+
+      const result = await controller.createSpecialHours(1, createSpecialHoursDto);
+      expect(result).toBeDefined();
+      expect(service.createSpecialHours).toHaveBeenCalledWith(1, createSpecialHoursDto);
+    });
+
+    it('should get special hours for a date range', async () => {
+      const startDate = new Date();
+      const endDate = new Date();
+
+      const result = await controller.getSpecialHours(1, startDate, endDate);
+      expect(result).toBeDefined();
+      expect(service.getSpecialHours).toHaveBeenCalledWith(1, startDate, endDate);
     });
   });
 }); 

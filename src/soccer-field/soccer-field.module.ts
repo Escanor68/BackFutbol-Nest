@@ -3,9 +3,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SoccerFieldController } from './soccer-field.controller';
 import { SoccerFieldService } from './soccer-field.service';
 import { SoccerField } from './entities/soccer-field.entity';
+import { Field } from './entities/field.entity';
+import { Review } from './entities/review.entity';
+import { SpecialHours } from './entities/special-hours.entity';
+import { Booking } from '../bookings/entities/booking.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SoccerField])],
+  imports: [
+    TypeOrmModule.forFeature([Field, Review, SpecialHours, Booking]),
+  ],
   controllers: [SoccerFieldController],
   providers: [SoccerFieldService],
   exports: [SoccerFieldService],
