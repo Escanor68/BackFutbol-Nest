@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  CreateDateColumn,
+} from 'typeorm';
 import { Field } from '../../soccer-field/entities/field.entity';
 
 @Entity()
@@ -6,7 +12,7 @@ export class Booking {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Field, field => field.bookings)
+  @ManyToOne(() => Field, (field) => field.bookings)
   field: Field;
 
   @Column()
@@ -29,4 +35,4 @@ export class Booking {
 
   @Column('decimal', { precision: 10, scale: 2 })
   totalPrice: number;
-} 
+}

@@ -1,98 +1,272 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🏟️ TurnosYa Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend para aplicación de reservas deportivas construido con **NestJS**, **TypeORM** y **MySQL**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 📋 Características
 
-## Description
+- **🔐 Autenticación JWT** con roles (jugador, propietario, admin)
+- **🏟️ Gestión de canchas** con ubicación geográfica
+- **📅 Sistema de reservas** con validación de disponibilidad
+- **⭐ Sistema de reseñas** y calificaciones
+- **📊 Estadísticas** para propietarios
+- **🌍 Búsqueda geográfica** de canchas cercanas
+- **📝 Logging** completo de requests/responses
+- **🛡️ Validación** robusta con class-validator
+- **📖 Documentación** automática con Swagger
+- **🐳 Docker** ready para desarrollo y producción
+- **☁️ AWS** ready para deploy en la nube
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 🚀 Inicio Rápido
 
-## Project setup
+### Prerrequisitos
 
-```bash
-$ npm install
-```
+- Node.js 18+
+- Docker y Docker Compose
+- Git
 
-## Compile and run the project
+### 🐳 Desarrollo con Docker (Recomendado)
 
 ```bash
-# development
-$ npm run start
+# Clonar el repositorio
+git clone <tu-repo>
+cd BackFutbol-Nest
 
-# watch mode
-$ npm run start:dev
+# Levantar servicios con Docker Compose
+docker-compose up -d
 
-# production mode
-$ npm run start:prod
+# Ver logs del backend
+docker-compose logs -f backend
 ```
 
-## Run tests
+**URLs disponibles:**
+
+- 🌐 Backend: http://localhost:3001
+- 📖 Swagger: http://localhost:3001/api
+- 🗄️ Adminer (DB): http://localhost:8080
+- 🔗 MySQL: localhost:3307
+
+### 💻 Desarrollo Local
 
 ```bash
-# unit tests
-$ npm run test
+# Instalar dependencias
+npm install
 
-# e2e tests
-$ npm run test:e2e
+# Configurar variables de entorno
+cp .env.example .env
 
-# test coverage
-$ npm run test:cov
+# Levantar solo la base de datos
+docker-compose up mysql -d
+
+# Iniciar en modo desarrollo
+npm run start:dev
 ```
 
-## Deployment
+## 📚 API Endpoints
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### 🔐 Autenticación
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+```
+POST /api/v1/auth/register    # Registrar usuario
+POST /api/v1/auth/login       # Iniciar sesión
+```
+
+### 👥 Usuarios
+
+```
+GET    /api/v1/users           # Listar usuarios (admin)
+GET    /api/v1/users/profile   # Perfil del usuario
+GET    /api/v1/users/:id       # Usuario por ID
+PATCH  /api/v1/users/:id       # Actualizar usuario
+DELETE /api/v1/users/:id       # Eliminar usuario (admin)
+```
+
+### 🏟️ Canchas
+
+```
+GET    /api/v1/fields              # Listar todas las canchas
+POST   /api/v1/fields              # Crear cancha (propietario)
+GET    /api/v1/fields/:id          # Cancha por ID
+GET    /api/v1/fields/search       # Buscar canchas con filtros
+GET    /api/v1/fields/nearby       # Canchas cercanas
+GET    /api/v1/fields/:id/availability  # Disponibilidad de cancha
+POST   /api/v1/fields/:id/reviews  # Crear reseña
+GET    /api/v1/fields/owner/:id/statistics  # Estadísticas (propietario)
+```
+
+### 📅 Reservas
+
+```
+GET    /api/v1/bookings         # Listar reservas
+POST   /api/v1/bookings         # Crear reserva
+GET    /api/v1/bookings/:id     # Reserva por ID
+DELETE /api/v1/bookings/:id     # Cancelar reserva
+```
+
+## 🏗️ Arquitectura
+
+```
+src/
+├── auth/                 # Autenticación y autorización
+│   ├── guards/          # Guards de autenticación
+│   ├── strategies/      # Estrategias de Passport
+│   └── dto/            # DTOs de auth
+├── users/               # Gestión de usuarios
+├── soccer-field/        # Gestión de canchas
+├── bookings/           # Sistema de reservas
+├── events/             # WebSocket Gateway
+├── common/             # Componentes compartidos
+│   ├── filters/        # Filtros de excepciones
+│   ├── interceptors/   # Interceptores
+│   └── decorators/     # Decoradores custom
+└── main.ts             # Punto de entrada
+```
+
+## 🗄️ Base de Datos
+
+### Entidades Principales
+
+- **User**: Usuarios (jugadores, propietarios, admins)
+- **Field**: Canchas de fútbol con ubicación y características
+- **Booking**: Reservas con fechas y horarios
+- **Review**: Reseñas y calificaciones
+- **SoccerField**: Sistema legacy de turnos (por eliminar)
+- **SpecialHours**: Horarios especiales para canchas
+
+### Relaciones
+
+```
+User 1→N Field (propietario)
+User 1→N Booking (reservas del usuario)
+User 1→N Review (reseñas del usuario)
+Field 1→N Booking (reservas en la cancha)
+Field 1→N Review (reseñas de la cancha)
+Field 1→N SpecialHours (horarios especiales)
+```
+
+## 🔧 Variables de Entorno
+
+```env
+# Database
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=futbol_user
+DB_PASSWORD=futbol_password
+DB_DATABASE=futbol_app
+
+# JWT
+JWT_SECRET=your-secret-key
+
+# App
+NODE_ENV=development
+PORT=3000
+CORS_ORIGIN=http://localhost:3000
+
+# AWS (Producción)
+AWS_REGION=us-east-1
+RDS_HOSTNAME=your-rds-endpoint
+```
+
+## 🧪 Testing
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Ejecutar tests
+npm test
+
+# Tests con coverage
+npm run test:cov
+
+# Tests e2e
+npm run test:e2e
+
+# Tests en modo watch
+npm run test:watch
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 📦 Scripts Disponibles
 
-## Resources
+```bash
+npm run start:dev     # Desarrollo con hot reload
+npm run start:prod    # Producción
+npm run build         # Compilar TypeScript
+npm run lint          # Linter
+npm run format        # Prettier
+npm test              # Tests unitarios
+npm run test:e2e      # Tests end-to-end
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## 🚀 Deploy en AWS
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### 📋 Preparación
 
-## Support
+1. **RDS MySQL** configurado
+2. **CodeBuild** project creado
+3. **CodeDeploy** application configurada
+4. **EC2** instances con CodeDeploy agent
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### 🏗️ BuildSpec (CodeBuild)
 
-## Stay in touch
+```yaml
+version: 0.2
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - npm install
+  build:
+    commands:
+      - echo Build started on `date`
+      - npm run build
+      - npm run test
+  post_build:
+    commands:
+      - echo Build completed on `date`
+artifacts:
+  files:
+    - '**/*'
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### 🔄 CI/CD Pipeline
 
-## License
+1. **Push** a main branch
+2. **CodeBuild** ejecuta tests y build
+3. **CodeDeploy** despliega a EC2
+4. **Health checks** automáticos
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## 🛡️ Seguridad
+
+- **🔐 JWT** tokens con expiración
+- **🛡️ Guards** de autenticación y autorización
+- **✅ Validación** de entrada con class-validator
+- **🚫 Rate limiting** (en main.ts si se configura)
+- **🔒 CORS** configurado
+- **🏥 Health checks** disponibles
+
+## 📖 Documentación API
+
+Una vez iniciado el servidor, visita:
+
+- **Swagger UI**: http://localhost:3001/api
+- **Health Check**: http://localhost:3001/api/v1/health
+
+## 🤝 Contribución
+
+1. Fork del proyecto
+2. Crear feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit cambios (`git commit -m 'Add AmazingFeature'`)
+4. Push a branch (`git push origin feature/AmazingFeature`)
+5. Abrir Pull Request
+
+## 📝 Licencia
+
+Este proyecto está bajo la Licencia MIT.
+
+## 👥 Equipo
+
+- **Backend**: NestJS + TypeORM + MySQL
+- **Auth**: JWT + Passport
+- **Deploy**: AWS (RDS + EC2 + CodePipeline)
+- **DevOps**: Docker + GitHub Actions
+
+---
+
+¿Tienes preguntas? ¡Abre un issue! 🚀

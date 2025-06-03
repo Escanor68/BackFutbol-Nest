@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsString, IsBoolean, IsOptional, IsDateString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsDateString,
+} from 'class-validator';
 
 export class CreateSpecialHoursDto {
   @IsNotEmpty()
@@ -20,4 +26,4 @@ export class CreateSpecialHoursDto {
   @IsOptional()
   @IsString()
   reason?: string;
-} 
+}

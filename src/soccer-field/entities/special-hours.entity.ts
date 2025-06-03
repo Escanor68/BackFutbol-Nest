@@ -6,7 +6,7 @@ export class SpecialHours {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Field, field => field.specialHours)
+  @ManyToOne(() => Field, (field) => field.specialHours)
   field: Field;
 
   @Column('date')
@@ -23,4 +23,4 @@ export class SpecialHours {
 
   @Column({ nullable: true })
   reason: string;
-} 
+}

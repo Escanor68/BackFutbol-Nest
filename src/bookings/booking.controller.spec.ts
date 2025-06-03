@@ -17,7 +17,7 @@ describe('BookingController', () => {
     startTime: '10:00',
     endTime: '11:00',
     status: 'confirmed',
-    totalPrice: 50.00,
+    totalPrice: 50.0,
   };
 
   const createBookingDto = {
@@ -38,7 +38,9 @@ describe('BookingController', () => {
             create: jest.fn().mockResolvedValue(mockBooking),
             findAll: jest.fn().mockResolvedValue([mockBooking]),
             findOne: jest.fn().mockResolvedValue(mockBooking),
-            cancel: jest.fn().mockResolvedValue({ ...mockBooking, status: 'cancelled' }),
+            cancel: jest
+              .fn()
+              .mockResolvedValue({ ...mockBooking, status: 'cancelled' }),
           },
         },
       ],
@@ -93,4 +95,4 @@ describe('BookingController', () => {
       expect(service.cancel).toHaveBeenCalledWith(1);
     });
   });
-}); 
+});

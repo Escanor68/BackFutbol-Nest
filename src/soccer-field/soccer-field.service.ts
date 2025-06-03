@@ -1,23 +1,23 @@
-import { Injectable, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
-import { SoccerField } from './entities/soccer-field.entity';
-import { CreateSoccerFieldDto } from './dto/create-soccer-field.dto';
+import { Repository, Between } from 'typeorm';
 import { Field } from './entities/field.entity';
 import { Booking } from '../bookings/entities/booking.entity';
 import { Review } from './entities/review.entity';
 import { SpecialHours } from './entities/special-hours.entity';
 import { CreateFieldDto } from './dto/create-field.dto';
-import { UpdateFieldDto } from './dto/update-field.dto';
 import { SearchFieldsDto } from './dto/search-fields.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { CreateSpecialHoursDto } from './dto/create-special-hours.dto';
 
+export interface TimeSlot {
+  startTime: string;
+  endTime: string;
+}
+
 @Injectable()
 export class SoccerFieldService {
   constructor(
-    @InjectRepository(SoccerField)
-    private readonly soccerFieldRepository: Repository<SoccerField>,
     @InjectRepository(Field)
     private readonly fieldRepository: Repository<Field>,
     @InjectRepository(Booking)
@@ -28,144 +28,9 @@ export class SoccerFieldService {
     private readonly specialHoursRepository: Repository<SpecialHours>,
   ) {}
 
-  async createShifts(createDto: CreateSoccerFieldDto): Promise<void> {
-    try {
-      this.validateTimeFormat(createDto.availableFrom);
-      this.validateTimeFormat(createDto.availableUntil);
-
-      const shifts = this.generateShifts(
-        createDto.userField,
-        createDto.fieldName,
-        createDto.availableFrom,
-        createDto.availableUntil,
-        createDto.price,
-      );
-
-      await Promise.all(shifts.map(shift => this.soccerFieldRepository.save(shift)));
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new BadRequestException(`Error creating shifts: ${error.message}`);
-    }
-  }
-
-  async getFieldsByOwner(userField: number): Promise<SoccerField[]> {
-    return this.soccerFieldRepository.find({
-      where: { owner: userField },
-    });
-  }
-
-  async reserveField(
-    owner: number,
-    fieldName: string,
-    schedule: string,
-    whoReservedId: number,
-    whoReservedName: string,
-  ): Promise<void> {
-    const field = await this.soccerFieldRepository.findOne({
-      where: { owner, schedule, fieldName },
-    });
-
-    if (!field) {
-      throw new NotFoundException(`Field ${fieldName} not found`);
-    }
-
-    if (field.reservation === 'Active') {
-      throw new ConflictException(`Field ${fieldName} is already reserved`);
-    }
-
-    field.whoReservedId = whoReservedId;
-    field.whoReservedName = whoReservedName;
-    field.reservation = 'Active';
-
-    await this.soccerFieldRepository.save(field);
-  }
-
-  async releaseField(id: string): Promise<void> {
-    const field = await this.soccerFieldRepository.findOne({
-      where: { id },
-    });
-
-    if (!field) {
-      throw new NotFoundException(`Field with ID ${id} not found`);
-    }
-
-    if (field.reservation === 'Inactive') {
-      throw new BadRequestException(`Field with ID ${id} is already available`);
-    }
-
-    field.whoReservedId = null;
-    field.whoReservedName = null;
-    field.reservation = 'Inactive';
-
-    await this.soccerFieldRepository.save(field);
-  }
-
-  async getNearbyFields(lat: number, lng: number, radiusKm = 20): Promise<SoccerField[]> {
-    return this.soccerFieldRepository
-      .createQueryBuilder('field')
-      .addSelect(
-        `(
-          6371 * acos(
-            cos(radians(:lat)) * cos(radians(field.latitude)) *
-            cos(radians(field.longitude) - radians(:lng)) +
-            sin(radians(:lat)) * sin(radians(field.latitude))
-          )
-        )`,
-        'distance',
-      )
-      .having('distance <= :radius', { radius: radiusKm })
-      .setParameters({ lat, lng })
-      .getMany();
-  }
-
-  private validateTimeFormat(time: string): void {
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/;
-    if (!timeRegex.test(time)) {
-      throw new BadRequestException('Time must be in HH:mm format');
-    }
-  }
-
-  private generateShifts(
-    owner: number,
-    fieldName: string,
-    availableFrom: string,
-    availableUntil: string,
-    price: number,
-  ): Partial<SoccerField>[] {
-    const shifts: Partial<SoccerField>[] = [];
-    const fromTime = new Date(`1970-01-01T${availableFrom}:00`);
-    const untilTime = new Date(`1970-01-01T${availableUntil}:00`);
-
-    if (fromTime >= untilTime) {
-      throw new BadRequestException('Start time must be before end time');
-    }
-
-    const maxExceedTime = new Date(untilTime.getTime() + 30 * 60 * 1000);
-    let currentTime = fromTime;
-
-    while (currentTime < maxExceedTime) {
-      const nextTime = new Date(currentTime.getTime() + 90 * 60 * 1000);
-
-      if (nextTime <= maxExceedTime) {
-        shifts.push({
-          owner,
-          fieldName,
-          schedule: `${this.formatTime(currentTime)} a ${this.formatTime(nextTime)}`,
-          price: price * 1.1,
-          reservation: 'Inactive',
-        });
-      }
-
-      currentTime = nextTime;
-    }
-
-    return shifts;
-  }
-
-  private formatTime(date: Date): string {
-    return date.toTimeString().slice(0, 5);
+  async createField(createFieldDto: CreateFieldDto): Promise<Field> {
+    const field = this.fieldRepository.create(createFieldDto);
+    return this.fieldRepository.save(field);
   }
 
   async findAll() {
@@ -186,7 +51,6 @@ export class SoccerFieldService {
   }
 
   async findNearby(lat: number, lng: number, radius: number) {
-    // Using Haversine formula in SQL
     const fields = await this.fieldRepository
       .createQueryBuilder('field')
       .where(
@@ -198,7 +62,7 @@ export class SoccerFieldService {
     return fields;
   }
 
-  async getAvailability(fieldId: number, date: Date) {
+  async getAvailability(fieldId: number, date: Date): Promise<TimeSlot[]> {
     const field = await this.findOne(fieldId);
     const bookings = await this.bookingRepository.find({
       where: {
@@ -208,29 +72,33 @@ export class SoccerFieldService {
       },
     });
 
-    // Get business hours for the specified day
     const dayOfWeek = date.getDay();
-    const businessHours = field.businessHours.find(bh => bh.day === dayOfWeek);
-    
+    const businessHours = field.businessHours.find(
+      (bh) => bh.day === dayOfWeek,
+    );
+
     if (!businessHours) {
       return [];
     }
 
-    // Generate all possible time slots
-    const timeSlots = this.generateTimeSlots(businessHours.openTime, businessHours.closeTime);
-    
-    // Filter out booked slots
-    return timeSlots.filter(slot => {
-      return !bookings.some(booking => 
-        (slot.startTime >= booking.startTime && slot.startTime < booking.endTime) ||
-        (slot.endTime > booking.startTime && slot.endTime <= booking.endTime)
+    const timeSlots = this.generateTimeSlots(
+      businessHours.openTime,
+      businessHours.closeTime,
+    );
+
+    return timeSlots.filter((slot) => {
+      return !bookings.some(
+        (booking) =>
+          (slot.startTime >= booking.startTime &&
+            slot.startTime < booking.endTime) ||
+          (slot.endTime > booking.startTime && slot.endTime <= booking.endTime),
       );
     });
   }
 
-  private generateTimeSlots(openTime: string, closeTime: string) {
-    const slots = [];
-    let currentTime = new Date(`2000-01-01T${openTime}`);
+  private generateTimeSlots(openTime: string, closeTime: string): TimeSlot[] {
+    const slots: TimeSlot[] = [];
+    const currentTime = new Date(`2000-01-01T${openTime}`);
     const endTime = new Date(`2000-01-01T${closeTime}`);
 
     while (currentTime < endTime) {
@@ -251,34 +119,48 @@ export class SoccerFieldService {
     const query = this.fieldRepository.createQueryBuilder('field');
 
     if (searchDto.minPrice) {
-      query.andWhere('field.pricePerHour >= :minPrice', { minPrice: searchDto.minPrice });
+      query.andWhere('field.pricePerHour >= :minPrice', {
+        minPrice: searchDto.minPrice,
+      });
     }
 
     if (searchDto.maxPrice) {
-      query.andWhere('field.pricePerHour <= :maxPrice', { maxPrice: searchDto.maxPrice });
+      query.andWhere('field.pricePerHour <= :maxPrice', {
+        maxPrice: searchDto.maxPrice,
+      });
     }
 
     if (searchDto.surface) {
-      query.andWhere('field.surface = :surface', { surface: searchDto.surface });
+      query.andWhere('field.surface = :surface', {
+        surface: searchDto.surface,
+      });
     }
 
     if (searchDto.hasLighting !== undefined) {
-      query.andWhere('field.hasLighting = :hasLighting', { hasLighting: searchDto.hasLighting });
+      query.andWhere('field.hasLighting = :hasLighting', {
+        hasLighting: searchDto.hasLighting,
+      });
     }
 
     if (searchDto.isIndoor !== undefined) {
-      query.andWhere('field.isIndoor = :isIndoor', { isIndoor: searchDto.isIndoor });
+      query.andWhere('field.isIndoor = :isIndoor', {
+        isIndoor: searchDto.isIndoor,
+      });
     }
 
     if (searchDto.minRating) {
-      query.andWhere('field.averageRating >= :minRating', { minRating: searchDto.minRating });
+      query.andWhere('field.averageRating >= :minRating', {
+        minRating: searchDto.minRating,
+      });
     }
 
     return query.getMany();
   }
 
   async createReview(fieldId: number, createReviewDto: CreateReviewDto) {
-    const field = await this.fieldRepository.findOne({ where: { id: fieldId } });
+    const field = await this.fieldRepository.findOne({
+      where: { id: fieldId },
+    });
     if (!field) {
       throw new NotFoundException(`Field with ID ${fieldId} not found`);
     }
@@ -290,10 +172,12 @@ export class SoccerFieldService {
 
     await this.reviewRepository.save(review);
 
-    // Update field's average rating and review count
-    const reviews = await this.reviewRepository.find({ where: { field: { id: fieldId } } });
+    const reviews = await this.reviewRepository.find({
+      where: { field: { id: fieldId } },
+    });
     field.reviewCount = reviews.length;
-    field.averageRating = reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviews.length;
+    field.averageRating =
+      reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviews.length;
     await this.fieldRepository.save(field);
 
     return review;
@@ -305,18 +189,26 @@ export class SoccerFieldService {
       relations: ['bookings', 'reviews'],
     });
 
-    return fields.map(field => ({
+    return fields.map((field) => ({
       fieldId: field.id,
       fieldName: field.name,
       totalBookings: field.bookings.length,
       averageRating: field.averageRating,
       reviewCount: field.reviewCount,
-      revenue: field.bookings.reduce((acc, booking) => acc + booking.totalPrice, 0),
+      revenue: field.bookings.reduce(
+        (acc, booking) => acc + booking.totalPrice,
+        0,
+      ),
     }));
   }
 
-  async createSpecialHours(fieldId: number, createSpecialHoursDto: CreateSpecialHoursDto) {
-    const field = await this.fieldRepository.findOne({ where: { id: fieldId } });
+  async createSpecialHours(
+    fieldId: number,
+    createSpecialHoursDto: CreateSpecialHoursDto,
+  ) {
+    const field = await this.fieldRepository.findOne({
+      where: { id: fieldId },
+    });
     if (!field) {
       throw new NotFoundException(`Field with ID ${fieldId} not found`);
     }
@@ -337,4 +229,32 @@ export class SoccerFieldService {
       },
     });
   }
-} 
+
+  async getFieldsByOwner(ownerId: number): Promise<Field[]> {
+    return this.fieldRepository.find({
+      where: { ownerId },
+    });
+  }
+
+  async getNearbyFields(
+    lat: number,
+    lng: number,
+    radiusKm = 20,
+  ): Promise<Field[]> {
+    return this.fieldRepository
+      .createQueryBuilder('field')
+      .addSelect(
+        `(
+          6371 * acos(
+            cos(radians(:lat)) * cos(radians(field.latitude)) *
+            cos(radians(field.longitude) - radians(:lng)) +
+            sin(radians(:lat)) * sin(radians(field.latitude))
+          )
+        )`,
+        'distance',
+      )
+      .having('distance <= :radius', { radius: radiusKm })
+      .setParameters({ lat, lng })
+      .getMany();
+  }
+}

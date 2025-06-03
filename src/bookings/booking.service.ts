@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Booking } from './entities/booking.entity';
@@ -41,7 +45,10 @@ export class BookingService {
     }
 
     // Calculate total price
-    const hours = this.calculateHours(createBookingDto.startTime, createBookingDto.endTime);
+    const hours = this.calculateHours(
+      createBookingDto.startTime,
+      createBookingDto.endTime,
+    );
     const totalPrice = hours * field.pricePerHour;
 
     const booking = this.bookingRepository.create({
@@ -54,8 +61,13 @@ export class BookingService {
     return this.bookingRepository.save(booking);
   }
 
-  async findAll(filters?: { userId?: number; fieldId?: number; date?: string }) {
-    const query = this.bookingRepository.createQueryBuilder('booking')
+  async findAll(filters?: {
+    userId?: number;
+    fieldId?: number;
+    date?: string;
+  }) {
+    const query = this.bookingRepository
+      .createQueryBuilder('booking')
       .leftJoinAndSelect('booking.field', 'field');
 
     if (filters?.userId) {
@@ -106,9 +118,10 @@ export class BookingService {
       },
     });
 
-    return !existingBookings.some(booking => 
-      (startTime >= booking.startTime && startTime < booking.endTime) ||
-      (endTime > booking.startTime && endTime <= booking.endTime)
+    return !existingBookings.some(
+      (booking) =>
+        (startTime >= booking.startTime && startTime < booking.endTime) ||
+        (endTime > booking.startTime && endTime <= booking.endTime),
     );
   }
 
@@ -117,4 +130,4 @@ export class BookingService {
     const end = new Date(`2000-01-01T${endTime}`);
     return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
   }
-} 
+}

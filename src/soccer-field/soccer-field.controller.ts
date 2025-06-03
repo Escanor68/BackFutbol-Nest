@@ -5,8 +5,8 @@ import {
   Body,
   Query,
   UseGuards,
-  ValidationPipe,
   Param,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,31 +14,28 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { SoccerFieldService } from './soccer-field.service';
-import { CreateSoccerFieldDto } from './dto/create-soccer-field.dto';
+import { SoccerFieldService, TimeSlot } from './soccer-field.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { SoccerField } from './entities/soccer-field.entity';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { ParseIntPipe } from '@nestjs/common';
 import { CreateFieldDto } from './dto/create-field.dto';
 import { SearchFieldsDto } from './dto/search-fields.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { CreateSpecialHoursDto } from './dto/create-special-hours.dto';
+import { UserRole } from '../users/entities/user.entity';
 
-@ApiTags('soccer-fields')
+interface RequestWithUser {
+  user: {
+    id: number;
+    role: UserRole;
+  };
+}
+
+@ApiTags('fields')
 @Controller('fields')
 export class SoccerFieldController {
   constructor(private readonly soccerFieldService: SoccerFieldService) {}
-
-  @Post('create')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create soccer field shifts' })
-  @ApiResponse({ status: 201, description: 'Shifts created successfully' })
-  async createShifts(
-    @Body(ValidationPipe) createDto: CreateSoccerFieldDto,
-  ): Promise<void> {
-    await this.soccerFieldService.createShifts(createDto);
-  }
 
   @Get()
   findAll() {
@@ -63,42 +60,9 @@ export class SoccerFieldController {
   getAvailability(
     @Param('id', ParseIntPipe) id: number,
     @Query('date') dateStr: string,
-  ) {
+  ): Promise<TimeSlot[]> {
     const date = new Date(dateStr);
     return this.soccerFieldService.getAvailability(id, date);
-  }
-
-  @Post('reserve')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Reserve a field' })
-  @ApiResponse({ status: 200, description: 'Field reserved successfully' })
-  async reserveField(
-    @Body(ValidationPipe)
-    reserveDto: {
-      owner: number;
-      fieldName: string;
-      schedule: string;
-      whoReservedId: number;
-      whoReservedName: string;
-    },
-  ): Promise<void> {
-    await this.soccerFieldService.reserveField(
-      reserveDto.owner,
-      reserveDto.fieldName,
-      reserveDto.schedule,
-      reserveDto.whoReservedId,
-      reserveDto.whoReservedName,
-    );
-  }
-
-  @Post('release')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Release a field' })
-  @ApiResponse({ status: 200, description: 'Field released successfully' })
-  async releaseField(@Body('id') id: string): Promise<void> {
-    await this.soccerFieldService.releaseField(id);
   }
 
   @Get('search')
@@ -161,5 +125,23 @@ export class SoccerFieldController {
       throw new Error('El radio debe ser mayor a 0');
     }
     return this.soccerFieldService.getNearbyFields(lat, lng, radius);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.FIELD_OWNER, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Crear nueva cancha de fútbol' })
+  @ApiResponse({ status: 201, description: 'Cancha creada exitosamente' })
+  @ApiResponse({
+    status: 403,
+    description: 'Solo propietarios pueden crear canchas',
+  })
+  async createField(
+    @Body() createFieldDto: CreateFieldDto,
+    @Req() req: RequestWithUser,
+  ) {
+    createFieldDto.ownerId = req.user.id;
+    return await this.soccerFieldService.createField(createFieldDto);
   }
 }

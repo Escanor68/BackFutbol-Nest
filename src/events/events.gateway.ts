@@ -50,4 +50,4 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.leave(`field_${fieldId}`);
     this.logger.log(`Client ${client.id} left room: field_${fieldId}`);
   }
-} 
+}

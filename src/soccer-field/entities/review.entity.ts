@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  CreateDateColumn,
+} from 'typeorm';
 import { Field } from './field.entity';
 
 @Entity()
@@ -12,7 +18,7 @@ export class Review {
   @Column()
   userName: string;
 
-  @ManyToOne(() => Field, field => field.reviews)
+  @ManyToOne(() => Field, (field) => field.reviews)
   field: Field;
 
   @Column('int')
@@ -23,4 +29,4 @@ export class Review {
 
   @CreateDateColumn()
   createdAt: Date;
-} 
+}

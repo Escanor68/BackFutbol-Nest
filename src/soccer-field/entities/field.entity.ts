@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Booking } from '../../bookings/entities/booking.entity';
 import { Review } from '../entities/review.entity';
 import { SpecialHours } from '../entities/special-hours.entity';
@@ -63,13 +70,13 @@ export class Field {
   @Column({ default: 0 })
   reviewCount: number;
 
-  @OneToMany(() => Booking, booking => booking.field)
+  @OneToMany(() => Booking, (booking) => booking.field)
   bookings: Booking[];
 
-  @OneToMany(() => Review, review => review.field)
+  @OneToMany(() => Review, (review) => review.field)
   reviews: Review[];
 
-  @OneToMany(() => SpecialHours, specialHours => specialHours.field)
+  @OneToMany(() => SpecialHours, (specialHours) => specialHours.field)
   specialHours: SpecialHours[];
 
   @Column()
@@ -80,4 +87,4 @@ export class Field {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}

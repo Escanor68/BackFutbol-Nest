@@ -6,28 +6,32 @@ import { Booking } from './entities/booking.entity';
 import { Field } from '../soccer-field/entities/field.entity';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 
+// Tipos específicos para los mocks
+type MockField = Partial<Field>;
+type MockBooking = Partial<Booking>;
+
 describe('BookingService', () => {
   let service: BookingService;
   let bookingRepository: Repository<Booking>;
   let fieldRepository: Repository<Field>;
 
-  const mockField = {
+  const mockField: MockField = {
     id: 1,
     name: 'Test Field',
     pricePerHour: 50.0,
-  } as any;
+  };
 
-  const mockBooking = {
+  const mockBooking: MockBooking = {
     id: 1,
-    field: mockField,
+    field: mockField as Field,
     userId: 1,
     date: new Date('2024-03-20'),
     startTime: '10:00',
     endTime: '11:00',
-    status: 'confirmed' as 'pending' | 'confirmed' | 'cancelled',
+    status: 'confirmed' as const,
     totalPrice: 50.0,
     createdAt: new Date(),
-  } as any;
+  };
 
   const createBookingDto = {
     fieldId: 1,
@@ -47,7 +51,7 @@ describe('BookingService', () => {
             create: jest.fn().mockReturnValue(mockBooking),
             save: jest.fn().mockResolvedValue(mockBooking),
             findOne: jest.fn().mockResolvedValue(mockBooking),
-            find: jest.fn().mockResolvedValue([mockBooking]),
+            find: jest.fn().mockResolvedValue([]),
             createQueryBuilder: jest.fn(() => ({
               leftJoinAndSelect: jest.fn().mockReturnThis(),
               where: jest.fn().mockReturnThis(),
@@ -78,11 +82,16 @@ describe('BookingService', () => {
 
   describe('create', () => {
     it('should create a booking successfully', async () => {
+      const findOneSpy = jest.spyOn(fieldRepository, 'findOne');
+      const createSpy = jest.spyOn(bookingRepository, 'create');
+      const saveSpy = jest.spyOn(bookingRepository, 'save');
+
       const result = await service.create(createBookingDto);
+
       expect(result).toEqual(mockBooking);
-      expect(fieldRepository.findOne).toHaveBeenCalled();
-      expect(bookingRepository.create).toHaveBeenCalled();
-      expect(bookingRepository.save).toHaveBeenCalled();
+      expect(findOneSpy).toHaveBeenCalled();
+      expect(createSpy).toHaveBeenCalled();
+      expect(saveSpy).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when field not found', async () => {
@@ -93,14 +102,16 @@ describe('BookingService', () => {
     });
 
     it('should throw BadRequestException when time slot is not available', async () => {
-      jest.spyOn(bookingRepository, 'find').mockResolvedValue([
-        {
-          ...mockBooking,
-          startTime: '10:00',
-          endTime: '11:00',
-          createdAt: new Date(),
-        } as any,
-      ]);
+      const conflictingBooking: MockBooking = {
+        ...mockBooking,
+        startTime: '10:00',
+        endTime: '11:00',
+        status: 'confirmed' as const,
+        createdAt: new Date(),
+      };
+      jest
+        .spyOn(bookingRepository, 'find')
+        .mockResolvedValue([conflictingBooking as Booking]);
       await expect(service.create(createBookingDto)).rejects.toThrow(
         BadRequestException,
       );
@@ -143,8 +154,13 @@ describe('BookingService', () => {
 
   describe('cancel', () => {
     it('should cancel a booking', async () => {
-      const cancelledBooking = { ...mockBooking, status: 'cancelled' as any };
-      jest.spyOn(bookingRepository, 'save').mockResolvedValue(cancelledBooking);
+      const cancelledBooking: MockBooking = {
+        ...mockBooking,
+        status: 'cancelled' as const,
+      };
+      jest
+        .spyOn(bookingRepository, 'save')
+        .mockResolvedValue(cancelledBooking as Booking);
 
       const result = await service.cancel(1);
       expect(result.status).toBe('cancelled');
