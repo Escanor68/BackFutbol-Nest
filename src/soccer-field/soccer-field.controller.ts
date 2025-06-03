@@ -1,5 +1,19 @@
-import { Controller, Post, Get, Body, Query, UseGuards, ValidationPipe, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Query,
+  UseGuards,
+  ValidationPipe,
+  Param,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { SoccerFieldService } from './soccer-field.service';
 import { CreateSoccerFieldDto } from './dto/create-soccer-field.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -20,7 +34,9 @@ export class SoccerFieldController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create soccer field shifts' })
   @ApiResponse({ status: 201, description: 'Shifts created successfully' })
-  async createShifts(@Body(ValidationPipe) createDto: CreateSoccerFieldDto): Promise<void> {
+  async createShifts(
+    @Body(ValidationPipe) createDto: CreateSoccerFieldDto,
+  ): Promise<void> {
     await this.soccerFieldService.createShifts(createDto);
   }
 
@@ -58,7 +74,8 @@ export class SoccerFieldController {
   @ApiOperation({ summary: 'Reserve a field' })
   @ApiResponse({ status: 200, description: 'Field reserved successfully' })
   async reserveField(
-    @Body(ValidationPipe) reserveDto: {
+    @Body(ValidationPipe)
+    reserveDto: {
       owner: number;
       fieldName: string;
       schedule: string;
@@ -110,7 +127,10 @@ export class SoccerFieldController {
     @Param('id') id: number,
     @Body() createSpecialHoursDto: CreateSpecialHoursDto,
   ) {
-    return this.soccerFieldService.createSpecialHours(id, createSpecialHoursDto);
+    return this.soccerFieldService.createSpecialHours(
+      id,
+      createSpecialHoursDto,
+    );
   }
 
   @Get(':id/special-hours')
@@ -121,4 +141,25 @@ export class SoccerFieldController {
   ) {
     return this.soccerFieldService.getSpecialHours(id, startDate, endDate);
   }
-} 
+
+  @Get('owner/:ownerId')
+  @UseGuards(JwtAuthGuard)
+  async getFieldsByOwner(@Param('ownerId', ParseIntPipe) ownerId: number) {
+    return this.soccerFieldService.getFieldsByOwner(ownerId);
+  }
+
+  @Get('nearby/:lat/:lng')
+  async getNearbyFields(
+    @Param('lat') lat: number,
+    @Param('lng') lng: number,
+    @Query('radius') radius?: number,
+  ) {
+    if (lat === null || lng === null) {
+      throw new Error('Latitud y longitud son requeridas');
+    }
+    if (radius !== undefined && radius < 0) {
+      throw new Error('El radio debe ser mayor a 0');
+    }
+    return this.soccerFieldService.getNearbyFields(lat, lng, radius);
+  }
+}

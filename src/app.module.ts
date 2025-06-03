@@ -1,42 +1,26 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SoccerFieldModule } from './soccer-field/soccer-field.module';
-import { AuthModule } from './auth/auth.module';
-import { SoccerField } from './soccer-field/entities/soccer-field.entity';
-import { EventsGateway } from './events/events.gateway';
-import { Field } from './soccer-field/entities/field.entity';
-import { Booking } from './bookings/entities/booking.entity';
-import { SoccerFieldController } from './soccer-field/soccer-field.controller';
-import { SoccerFieldService } from './soccer-field/soccer-field.service';
-import { BookingController } from './bookings/booking.controller';
-import { BookingService } from './bookings/booking.service';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'mysql',
-        host: configService.get('DB_HOST'),
-        port: configService.get('DB_PORT'),
-        username: configService.get('DB_USER'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_NAME'),
-        entities: [SoccerField],
-        synchronize: configService.get('NODE_ENV') !== 'production',
-        logging: configService.get('NODE_ENV') === 'development',
-      }),
-      inject: [ConfigService],
+    TypeOrmModule.forRoot({
+      type: 'mysql',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT) || 3306,
+      username: process.env.DB_USERNAME || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_DATABASE || 'test_db',
+      entities: [],
+      synchronize: process.env.NODE_ENV !== 'production',
     }),
-    TypeOrmModule.forFeature([Field, Booking]),
-    SoccerFieldModule,
-    AuthModule,
   ],
-  controllers: [AppController, SoccerFieldController, BookingController],
-  providers: [EventsGateway, SoccerFieldService, BookingService],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

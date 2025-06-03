@@ -16,7 +16,18 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+      expect(appController.getHello()).toBe(
+        '🏟️ TurnosYa Backend - API para gestión de canchas de fútbol',
+      );
+    });
+  });
+
+  describe('health', () => {
+    it('should return health status', () => {
+      const result = appController.getHealth();
+      expect(result).toHaveProperty('status', 'ok');
+      expect(result).toHaveProperty('service', 'TurnosYa Backend');
+      expect(result).toHaveProperty('timestamp');
     });
   });
 });

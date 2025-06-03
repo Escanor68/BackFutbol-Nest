@@ -14,8 +14,8 @@ describe('BookingService', () => {
   const mockField = {
     id: 1,
     name: 'Test Field',
-    pricePerHour: 50.00,
-  };
+    pricePerHour: 50.0,
+  } as any;
 
   const mockBooking = {
     id: 1,
@@ -24,9 +24,10 @@ describe('BookingService', () => {
     date: new Date('2024-03-20'),
     startTime: '10:00',
     endTime: '11:00',
-    status: 'confirmed',
-    totalPrice: 50.00,
-  };
+    status: 'confirmed' as 'pending' | 'confirmed' | 'cancelled',
+    totalPrice: 50.0,
+    createdAt: new Date(),
+  } as any;
 
   const createBookingDto = {
     fieldId: 1,
@@ -65,7 +66,9 @@ describe('BookingService', () => {
     }).compile();
 
     service = module.get<BookingService>(BookingService);
-    bookingRepository = module.get<Repository<Booking>>(getRepositoryToken(Booking));
+    bookingRepository = module.get<Repository<Booking>>(
+      getRepositoryToken(Booking),
+    );
     fieldRepository = module.get<Repository<Field>>(getRepositoryToken(Field));
   });
 
@@ -84,14 +87,23 @@ describe('BookingService', () => {
 
     it('should throw NotFoundException when field not found', async () => {
       jest.spyOn(fieldRepository, 'findOne').mockResolvedValue(null);
-      await expect(service.create(createBookingDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create(createBookingDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException when time slot is not available', async () => {
       jest.spyOn(bookingRepository, 'find').mockResolvedValue([
-        { ...mockBooking, startTime: '10:00', endTime: '11:00' },
+        {
+          ...mockBooking,
+          startTime: '10:00',
+          endTime: '11:00',
+          createdAt: new Date(),
+        } as any,
       ]);
-      await expect(service.create(createBookingDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create(createBookingDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -131,9 +143,9 @@ describe('BookingService', () => {
 
   describe('cancel', () => {
     it('should cancel a booking', async () => {
-      const cancelledBooking = { ...mockBooking, status: 'cancelled' };
+      const cancelledBooking = { ...mockBooking, status: 'cancelled' as any };
       jest.spyOn(bookingRepository, 'save').mockResolvedValue(cancelledBooking);
-      
+
       const result = await service.cancel(1);
       expect(result.status).toBe('cancelled');
     });
@@ -143,4 +155,4 @@ describe('BookingService', () => {
       await expect(service.cancel(999)).rejects.toThrow(NotFoundException);
     });
   });
-}); 
+});
