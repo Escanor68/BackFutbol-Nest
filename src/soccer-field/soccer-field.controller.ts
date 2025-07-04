@@ -15,20 +15,19 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { SoccerFieldService, TimeSlot } from './soccer-field.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
+import { ExternalJwtAuthGuard } from '../auth/guards/external-jwt-auth.guard';
+import { ExternalRolesGuard } from '../auth/guards/external-roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ParseIntPipe } from '@nestjs/common';
 import { CreateFieldDto } from './dto/create-field.dto';
 import { SearchFieldsDto } from './dto/search-fields.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { CreateSpecialHoursDto } from './dto/create-special-hours.dto';
-import { UserRole } from '../users/entities/user.entity';
 
 interface RequestWithUser {
   user: {
     id: number;
-    role: UserRole;
+    role: 'PLAYER' | 'FIELD_OWNER' | 'ADMIN';
   };
 }
 
@@ -71,7 +70,7 @@ export class SoccerFieldController {
   }
 
   @Post(':id/reviews')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ExternalJwtAuthGuard)
   async createReview(
     @Param('id') id: number,
     @Body() createReviewDto: CreateReviewDto,
@@ -80,13 +79,13 @@ export class SoccerFieldController {
   }
 
   @Get('owner/:ownerId/statistics')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ExternalJwtAuthGuard)
   async getFieldStatistics(@Param('ownerId') ownerId: number) {
     return this.soccerFieldService.getFieldStatistics(ownerId);
   }
 
   @Post(':id/special-hours')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ExternalJwtAuthGuard)
   async createSpecialHours(
     @Param('id') id: number,
     @Body() createSpecialHoursDto: CreateSpecialHoursDto,
@@ -107,7 +106,7 @@ export class SoccerFieldController {
   }
 
   @Get('owner/:ownerId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(ExternalJwtAuthGuard)
   async getFieldsByOwner(@Param('ownerId', ParseIntPipe) ownerId: number) {
     return this.soccerFieldService.getFieldsByOwner(ownerId);
   }
@@ -128,8 +127,8 @@ export class SoccerFieldController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.FIELD_OWNER, UserRole.ADMIN)
+  @UseGuards(ExternalJwtAuthGuard, ExternalRolesGuard)
+  @Roles('FIELD_OWNER', 'ADMIN')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear nueva cancha de fútbol' })
   @ApiResponse({ status: 201, description: 'Cancha creada exitosamente' })

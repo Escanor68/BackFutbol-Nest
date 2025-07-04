@@ -1,0 +1,68 @@
+{
+  "errors": {
+    "fieldNotFound": "Field not found",
+    "userNotFound": "User not found",
+    "bookingNotFound": "Booking with ID {id} not found",
+    "unavailableTimeSlot": "This time slot is not available",
+    "outsideBusinessHours": "The requested time is outside business hours",
+    "fieldClosedSpecialHours": "The field is closed this day: {reason}",
+    "cancelTooLate": "Cannot cancel less than 2 hours in advance",
+    "duplicateReview": "You have already submitted a review for this field",
+    "specialHoursConflict": "Time conflict: {time1} overlaps with {time2}",
+    "specialHoursOutsideBusiness": "Special hours ({specialTime}) must be within business hours ({businessTime})",
+    "invalidTimeRange": "Opening time must be before closing time",
+    "recurrencePatternRequired": "Recurrence pattern required for recurring bookings",
+    "emailAlreadyExists": "Email is already registered",
+    "fieldDoesNotOperateThisDay": "The field does not operate on this day of the week",
+    "mustSpecifyOpenCloseTime": "Must specify opening and closing time for special hours"
+  },
+  "success": {
+    "bookingCreated": "Booking created successfully",
+    "recurrentBookingsCreated": "{count} recurring bookings created",
+    "bookingCancelled": "Booking cancelled successfully",
+    "seriesCancelled": "Booking series cancelled",
+    "reviewCreated": "Review created successfully",
+    "fieldCreated": "Field created successfully",
+    "specialHoursCreated": "Special hours created",
+    "userCreated": "User created successfully"
+  },
+  "field": {
+    "pricePerHour": "Price per hour",
+    "displayPrice": "Display price (includes 10% fee)",
+    "platformFee": "Platform fee",
+    "basePrice": "Base price",
+    "userPayment": "User payment",
+    "surface": {
+      "natural": "Natural grass",
+      "synthetic": "Synthetic grass",
+      "concrete": "Concrete"
+    },
+    "amenities": {
+      "parking": "Parking",
+      "bathroom": "Bathroom",
+      "changing_rooms": "Changing rooms",
+      "cafe": "Cafe",
+      "security": "Security",
+      "grill": "Grill"
+    }
+  },
+  "booking": {
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled"
+    },
+    "recurrence": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    }
+  },
+  "user": {
+    "roles": {
+      "player": "Player",
+      "field_owner": "Field Owner",
+      "admin": "Administrator"
+    }
+  }
+}

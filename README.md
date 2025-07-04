@@ -1,272 +1,374 @@
-# 🏟️ TurnosYa Backend
+# 🏟️ BackFutbol-Nest - Microservicio de Gestión de Fútbol
 
-Backend para aplicación de reservas deportivas construido con **NestJS**, **TypeORM** y **MySQL**.
+Microservicio especializado en la gestión de canchas de fútbol, reservas, horarios y calificaciones. Diseñado para trabajar en conjunto con otros microservicios en una arquitectura desacoplada.
 
-## 📋 Características
+## 🏗️ Arquitectura de Microservicios
 
-- **🔐 Autenticación JWT** con roles (jugador, propietario, admin)
-- **🏟️ Gestión de canchas** con ubicación geográfica
-- **📅 Sistema de reservas** con validación de disponibilidad
-- **⭐ Sistema de reseñas** y calificaciones
-- **📊 Estadísticas** para propietarios
-- **🌍 Búsqueda geográfica** de canchas cercanas
-- **📝 Logging** completo de requests/responses
-- **🛡️ Validación** robusta con class-validator
-- **📖 Documentación** automática con Swagger
-- **🐳 Docker** ready para desarrollo y producción
-- **☁️ AWS** ready para deploy en la nube
+Este servicio es parte de un ecosistema de 3 microservicios:
 
-## 🚀 Inicio Rápido
+- **🔹 BackUPyUC** → Gestión de usuarios y autenticación
+- **🔹 BackMP** → Gestión de pagos con MercadoPago
+- **🔹 BackFutbol-Nest** → Este servicio (gestión de fútbol)
 
-### Prerrequisitos
+### Responsabilidades del Microservicio
+
+✅ **Lo que SÍ maneja:**
+
+- ABM de canchas de fútbol
+- Gestión de reservas y turnos
+- Horarios y disponibilidad
+- Calificaciones y reviews
+- Validación de turnos
+- Integración con otros microservicios
+
+❌ **Lo que NO maneja:**
+
+- Usuarios (delegado a BackUPyUC)
+- Pagos (delegado a BackMP)
+- Autenticación local
+
+## 🚀 Características Principales
+
+### 🔐 Autenticación Externa
+
+- Valida tokens JWT de BackUPyUC
+- No maneja usuarios localmente
+- Guards y decoradores para roles externos
+
+### 💳 Integración de Pagos
+
+- Comunicación con BackMP
+- Validación de pagos antes de confirmar reservas
+- Procesamiento de webhooks
+
+### 🏥 Health Checks
+
+- Endpoints de health, readiness y liveness
+- Monitoreo de servicios externos
+- Verificación de base de datos
+
+### 🐳 Docker & Producción
+
+- Multi-stage Docker build
+- Health checks integrados
+- Configuración para AWS ECS
+- Variables de entorno seguras
+
+## 📋 Prerrequisitos
 
 - Node.js 18+
-- Docker y Docker Compose
-- Git
+- MySQL 8.0+
+- Docker & Docker Compose
+- AWS CLI (para despliegue)
 
-### 🐳 Desarrollo con Docker (Recomendado)
+## 🛠️ Instalación y Configuración
+
+### 1. Clonar y instalar dependencias
 
 ```bash
-# Clonar el repositorio
-git clone <tu-repo>
+git clone <repository-url>
 cd BackFutbol-Nest
-
-# Levantar servicios con Docker Compose
-docker-compose up -d
-
-# Ver logs del backend
-docker-compose logs -f backend
+npm install
 ```
 
-**URLs disponibles:**
-
-- 🌐 Backend: http://localhost:3001
-- 📖 Swagger: http://localhost:3001/api
-- 🗄️ Adminer (DB): http://localhost:8080
-- 🔗 MySQL: localhost:3307
-
-### 💻 Desarrollo Local
+### 2. Configurar variables de entorno
 
 ```bash
-# Instalar dependencias
-npm install
+cp env.example .env
+# Editar .env con tus configuraciones
+```
 
-# Configurar variables de entorno
-cp .env.example .env
+### 3. Variables de entorno requeridas
 
-# Levantar solo la base de datos
-docker-compose up mysql -d
+```env
+# Configuración de la aplicación
+NODE_ENV=development
+PORT=3000
+APP_VERSION=1.0.0
 
-# Iniciar en modo desarrollo
+# Base de datos
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=your_password
+DB_DATABASE=futbol_app
+
+# Microservicios
+BACK_UPYUC_URL=http://localhost:3001
+BACK_MP_URL=http://localhost:3002
+
+# JWT (para validación de tokens de BackUPyUC)
+JWT_SECRET=your-jwt-secret-key
+JWT_PUBLIC_KEY=your-jwt-public-key
+
+# CORS
+CORS_ORIGIN=http://localhost:3000
+```
+
+## 🏃‍♂️ Ejecución
+
+### Desarrollo local
+
+```bash
+# Con Docker Compose (recomendado)
+docker-compose up
+
+# O directamente con Node.js
 npm run start:dev
+```
+
+### Producción
+
+```bash
+# Construir imagen
+docker build -t backfutbol-nest .
+
+# Ejecutar contenedor
+docker run -p 3000:3000 --env-file .env backfutbol-nest
 ```
 
 ## 📚 API Endpoints
 
-### 🔐 Autenticación
+### Health Checks
 
-```
-POST /api/v1/auth/register    # Registrar usuario
-POST /api/v1/auth/login       # Iniciar sesión
-```
+- `GET /api/v1/health` - Health check básico
+- `GET /api/v1/health/ready` - Readiness probe
+- `GET /api/v1/health/live` - Liveness probe
 
-### 👥 Usuarios
+### Canchas de Fútbol
 
-```
-GET    /api/v1/users           # Listar usuarios (admin)
-GET    /api/v1/users/profile   # Perfil del usuario
-GET    /api/v1/users/:id       # Usuario por ID
-PATCH  /api/v1/users/:id       # Actualizar usuario
-DELETE /api/v1/users/:id       # Eliminar usuario (admin)
-```
+- `GET /api/v1/fields` - Listar todas las canchas
+- `GET /api/v1/fields/:id` - Obtener cancha específica
+- `POST /api/v1/fields` - Crear nueva cancha (FIELD_OWNER, ADMIN)
+- `GET /api/v1/fields/search` - Buscar canchas
+- `GET /api/v1/fields/nearby` - Canchas cercanas
 
-### 🏟️ Canchas
+### Reservas
 
-```
-GET    /api/v1/fields              # Listar todas las canchas
-POST   /api/v1/fields              # Crear cancha (propietario)
-GET    /api/v1/fields/:id          # Cancha por ID
-GET    /api/v1/fields/search       # Buscar canchas con filtros
-GET    /api/v1/fields/nearby       # Canchas cercanas
-GET    /api/v1/fields/:id/availability  # Disponibilidad de cancha
-POST   /api/v1/fields/:id/reviews  # Crear reseña
-GET    /api/v1/fields/owner/:id/statistics  # Estadísticas (propietario)
-```
+- `GET /api/v1/bookings` - Listar reservas
+- `POST /api/v1/bookings` - Crear reserva
+- `GET /api/v1/bookings/:id` - Obtener reserva específica
+- `PUT /api/v1/bookings/:id` - Actualizar reserva
+- `DELETE /api/v1/bookings/:id` - Cancelar reserva
 
-### 📅 Reservas
+### Reviews
 
-```
-GET    /api/v1/bookings         # Listar reservas
-POST   /api/v1/bookings         # Crear reserva
-GET    /api/v1/bookings/:id     # Reserva por ID
-DELETE /api/v1/bookings/:id     # Cancelar reserva
-```
+- `POST /api/v1/fields/:id/reviews` - Crear review
+- `GET /api/v1/fields/:id/reviews` - Obtener reviews de una cancha
 
-## 🏗️ Arquitectura
+### Documentación Swagger
 
-```
-src/
-├── auth/                 # Autenticación y autorización
-│   ├── guards/          # Guards de autenticación
-│   ├── strategies/      # Estrategias de Passport
-│   └── dto/            # DTOs de auth
-├── users/               # Gestión de usuarios
-├── soccer-field/        # Gestión de canchas
-├── bookings/           # Sistema de reservas
-├── events/             # WebSocket Gateway
-├── common/             # Componentes compartidos
-│   ├── filters/        # Filtros de excepciones
-│   ├── interceptors/   # Interceptores
-│   └── decorators/     # Decoradores custom
-└── main.ts             # Punto de entrada
-```
+- `GET /api` - Documentación interactiva de la API
 
-## 🗄️ Base de Datos
+## 🔐 Autenticación y Autorización
 
-### Entidades Principales
+### Tokens JWT
 
-- **User**: Usuarios (jugadores, propietarios, admins)
-- **Field**: Canchas de fútbol con ubicación y características
-- **Booking**: Reservas con fechas y horarios
-- **Review**: Reseñas y calificaciones
-- **SoccerField**: Sistema legacy de turnos (por eliminar)
-- **SpecialHours**: Horarios especiales para canchas
+El servicio valida tokens JWT emitidos por BackUPyUC. Los tokens deben incluir:
 
-### Relaciones
+- `sub`: ID del usuario
+- `email`: Email del usuario
+- `role`: Rol del usuario (PLAYER, FIELD_OWNER, ADMIN)
 
-```
-User 1→N Field (propietario)
-User 1→N Booking (reservas del usuario)
-User 1→N Review (reseñas del usuario)
-Field 1→N Booking (reservas en la cancha)
-Field 1→N Review (reseñas de la cancha)
-Field 1→N SpecialHours (horarios especiales)
+### Roles y Permisos
+
+- **PLAYER**: Puede hacer reservas y reviews
+- **FIELD_OWNER**: Puede crear y gestionar canchas
+- **ADMIN**: Acceso completo al sistema
+
+### Uso de Guards
+
+```typescript
+@UseGuards(ExternalJwtAuthGuard, ExternalRolesGuard)
+@Roles('FIELD_OWNER', 'ADMIN')
+async createField() {
+  // Solo usuarios con roles FIELD_OWNER o ADMIN
+}
 ```
 
-## 🔧 Variables de Entorno
+## 🐳 Docker
 
-```env
-# Database
-DB_HOST=localhost
-DB_PORT=3306
-DB_USERNAME=futbol_user
-DB_PASSWORD=futbol_password
-DB_DATABASE=futbol_app
+### Construir imagen
 
-# JWT
-JWT_SECRET=your-secret-key
-
-# App
-NODE_ENV=development
-PORT=3000
-CORS_ORIGIN=http://localhost:3000
-
-# AWS (Producción)
-AWS_REGION=us-east-1
-RDS_HOSTNAME=your-rds-endpoint
+```bash
+docker build -t backfutbol-nest .
 ```
+
+### Ejecutar con Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+### Health checks
+
+```bash
+# Verificar salud del servicio
+curl http://localhost:3000/api/v1/health
+
+# Verificar readiness
+curl http://localhost:3000/api/v1/health/ready
+
+# Verificar liveness
+curl http://localhost:3000/api/v1/health/live
+```
+
+## ☁️ Despliegue en AWS
+
+### Prerrequisitos
+
+- AWS CLI configurado
+- Docker instalado
+- Variables de entorno configuradas
+
+### Desplegar
+
+```bash
+# Hacer el script ejecutable
+chmod +x scripts/deploy-aws.sh
+
+# Desplegar en producción
+./scripts/deploy-aws.sh production
+
+# O en staging
+./scripts/deploy-aws.sh staging
+```
+
+### Configuración AWS
+
+El despliegue incluye:
+
+- ECS Cluster con Fargate
+- Application Load Balancer
+- RDS MySQL (configurar por separado)
+- CloudWatch Logs
+- IAM Roles y Security Groups
 
 ## 🧪 Testing
 
 ```bash
-# Ejecutar tests
-npm test
-
-# Tests con coverage
-npm run test:cov
+# Tests unitarios
+npm run test
 
 # Tests e2e
 npm run test:e2e
 
-# Tests en modo watch
-npm run test:watch
+# Coverage
+npm run test:cov
 ```
 
-## 📦 Scripts Disponibles
+## 📊 Monitoreo
+
+### Health Checks
+
+El servicio expone endpoints de monitoreo:
+
+- `/api/v1/health` - Estado general
+- `/api/v1/health/ready` - Listo para recibir tráfico
+- `/api/v1/health/live` - Proceso vivo
+
+### Logs
+
+- Logs estructurados con Winston
+- Integración con CloudWatch en AWS
+- Niveles de log configurables
+
+### Métricas
+
+- Tiempo de respuesta de endpoints
+- Estado de servicios externos
+- Uso de recursos
+
+## 🔧 Configuración Avanzada
+
+### Base de Datos
+
+```typescript
+// Configuración TypeORM optimizada para producción
+TypeOrmModule.forRoot({
+  type: 'mysql',
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT),
+  username: process.env.DB_USERNAME,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  entities: [__dirname + '/**/*.entity{.ts,.js}'],
+  synchronize: process.env.NODE_ENV !== 'production',
+  logging: process.env.NODE_ENV === 'development',
+  ssl:
+    process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: false }
+      : false,
+  extra: {
+    connectionLimit: 10,
+    acquireTimeout: 60000,
+    timeout: 60000,
+  },
+});
+```
+
+### Rate Limiting
+
+```typescript
+// Configuración de rate limiting
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100, // máximo 100 requests por ventana
+    message: 'Demasiadas requests desde esta IP',
+  }),
+);
+```
+
+## 🚨 Troubleshooting
+
+### Problemas Comunes
+
+1. **Error de conexión a base de datos**
+
+   - Verificar variables de entorno DB\_\*
+   - Verificar que MySQL esté ejecutándose
+   - Verificar permisos de usuario
+
+2. **Error de autenticación**
+
+   - Verificar que BackUPyUC esté disponible
+   - Verificar configuración JWT_SECRET
+   - Verificar formato del token
+
+3. **Error de integración con BackMP**
+   - Verificar que BackMP esté disponible
+   - Verificar configuración BACK_MP_URL
+   - Verificar logs de comunicación
+
+### Logs de Debug
 
 ```bash
-npm run start:dev     # Desarrollo con hot reload
-npm run start:prod    # Producción
-npm run build         # Compilar TypeScript
-npm run lint          # Linter
-npm run format        # Prettier
-npm test              # Tests unitarios
-npm run test:e2e      # Tests end-to-end
+# Habilitar logs detallados
+export LOG_LEVEL=debug
+npm run start:dev
 ```
-
-## 🚀 Deploy en AWS
-
-### 📋 Preparación
-
-1. **RDS MySQL** configurado
-2. **CodeBuild** project creado
-3. **CodeDeploy** application configurada
-4. **EC2** instances con CodeDeploy agent
-
-### 🏗️ BuildSpec (CodeBuild)
-
-```yaml
-version: 0.2
-phases:
-  pre_build:
-    commands:
-      - echo Logging in to Amazon ECR...
-      - npm install
-  build:
-    commands:
-      - echo Build started on `date`
-      - npm run build
-      - npm run test
-  post_build:
-    commands:
-      - echo Build completed on `date`
-artifacts:
-  files:
-    - '**/*'
-```
-
-### 🔄 CI/CD Pipeline
-
-1. **Push** a main branch
-2. **CodeBuild** ejecuta tests y build
-3. **CodeDeploy** despliega a EC2
-4. **Health checks** automáticos
-
-## 🛡️ Seguridad
-
-- **🔐 JWT** tokens con expiración
-- **🛡️ Guards** de autenticación y autorización
-- **✅ Validación** de entrada con class-validator
-- **🚫 Rate limiting** (en main.ts si se configura)
-- **🔒 CORS** configurado
-- **🏥 Health checks** disponibles
-
-## 📖 Documentación API
-
-Una vez iniciado el servidor, visita:
-
-- **Swagger UI**: http://localhost:3001/api
-- **Health Check**: http://localhost:3001/api/v1/health
 
 ## 🤝 Contribución
 
-1. Fork del proyecto
+1. Fork el proyecto
 2. Crear feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add AmazingFeature'`)
-4. Push a branch (`git push origin feature/AmazingFeature`)
+3. Commit cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push al branch (`git push origin feature/AmazingFeature`)
 5. Abrir Pull Request
 
-## 📝 Licencia
+## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT.
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
 
-## 👥 Equipo
+## 📞 Soporte
 
-- **Backend**: NestJS + TypeORM + MySQL
-- **Auth**: JWT + Passport
-- **Deploy**: AWS (RDS + EC2 + CodePipeline)
-- **DevOps**: Docker + GitHub Actions
+Para soporte técnico o preguntas:
+
+- Crear un issue en GitHub
+- Contactar al equipo de desarrollo
+- Revisar la documentación de la API en `/api`
 
 ---
 
-¿Tienes preguntas? ¡Abre un issue! 🚀
+**🏟️ BackFutbol-Nest** - Microservicio especializado en gestión de fútbol ⚽

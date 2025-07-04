@@ -4,16 +4,25 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   CreateDateColumn,
+  Unique,
+  Index,
 } from 'typeorm';
 import { Field } from './field.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Entity()
+@Unique(['userId', 'field'])
+@Index('idx_review_rating', ['rating'])
+@Index('idx_review_field', ['field'])
 export class Review {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column()
   userId: number;
+
+  @ManyToOne(() => User, (user) => user.reviews)
+  user: User;
 
   @Column()
   userName: string;

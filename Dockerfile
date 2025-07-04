@@ -2,7 +2,7 @@
 FROM node:18-alpine AS base
 
 # Instalar dependencias necesarias
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init curl
 
 # Establecer directorio de trabajo
 WORKDIR /usr/src/app
@@ -33,8 +33,15 @@ COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
 # Copiar aplicación construida
 COPY --chown=node:node --from=build /usr/src/app/dist ./dist
 
+# Copiar archivos de configuración necesarios
+COPY --chown=node:node --from=build /usr/src/app/src/i18n ./dist/i18n
+
 # Exponer puerto
 EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/api/v1/health || exit 1
 
 # Comando para ejecutar la aplicación
 CMD ["dumb-init", "node", "dist/main"] 

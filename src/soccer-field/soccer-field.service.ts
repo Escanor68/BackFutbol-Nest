@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Field } from './entities/field.entity';
@@ -165,6 +169,20 @@ export class SoccerFieldService {
       throw new NotFoundException(`Field with ID ${fieldId} not found`);
     }
 
+    // Verificar si el usuario ya tiene una review para esta cancha
+    const existingReview = await this.reviewRepository.findOne({
+      where: {
+        userId: createReviewDto.userId,
+        field: { id: fieldId },
+      },
+    });
+
+    if (existingReview) {
+      throw new BadRequestException(
+        'Ya has enviado una reseña para esta cancha',
+      );
+    }
+
     const review = this.reviewRepository.create({
       ...createReviewDto,
       field,
@@ -172,6 +190,7 @@ export class SoccerFieldService {
 
     await this.reviewRepository.save(review);
 
+    // Recalcular ratings
     const reviews = await this.reviewRepository.find({
       where: { field: { id: fieldId } },
     });

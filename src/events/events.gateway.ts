@@ -29,25 +29,28 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // Ejemplo de método para notificar reservas en tiempo real
-  notifyFieldReservation(fieldId: string, reservation: any) {
-    this.server.emit('fieldReserved', { fieldId, reservation });
+  notifyFieldReservation(
+    fieldId: string,
+    reservation: Record<string, unknown>,
+  ) {
+    void this.server.emit('fieldReserved', { fieldId, reservation });
   }
 
   // Ejemplo de método para notificar liberación de canchas
   notifyFieldRelease(fieldId: string) {
-    this.server.emit('fieldReleased', { fieldId });
+    void this.server.emit('fieldReleased', { fieldId });
   }
 
   // Ejemplo de suscripción a eventos del cliente
   @SubscribeMessage('joinFieldRoom')
   handleJoinFieldRoom(client: Socket, fieldId: string) {
-    client.join(`field_${fieldId}`);
+    void client.join(`field_${fieldId}`);
     this.logger.log(`Client ${client.id} joined room: field_${fieldId}`);
   }
 
   @SubscribeMessage('leaveFieldRoom')
   handleLeaveFieldRoom(client: Socket, fieldId: string) {
-    client.leave(`field_${fieldId}`);
+    void client.leave(`field_${fieldId}`);
     this.logger.log(`Client ${client.id} left room: field_${fieldId}`);
   }
 }

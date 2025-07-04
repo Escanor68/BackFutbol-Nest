@@ -1,0 +1,20 @@
+{
+  "errors": {
+    "unauthorized": "No autorizado",
+    "forbidden": "Acceso denegado",
+    "notFound": "Recurso no encontrado",
+    "badRequest": "Solicitud inválida",
+    "internalServerError": "Error interno del servidor"
+  },
+  "auth": {
+    "invalidCredentials": "Credenciales inválidas",
+    "accountDisabled": "Cuenta desactivada",
+    "invalidToken": "Token inválido"
+  },
+  "bookings": {
+    "created": "Reserva creada exitosamente",
+    "cancelled": "Reserva cancelada exitosamente",
+    "timeSlotUnavailable": "El horario seleccionado no está disponible",
+    "outsideBusinessHours": "El horario seleccionado está fuera del horario de funcionamiento"
+  }
+}

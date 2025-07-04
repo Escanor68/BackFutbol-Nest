@@ -3,14 +3,22 @@ import {
   Column,
   PrimaryGeneratedColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { Booking } from '../../bookings/entities/booking.entity';
 import { Review } from '../entities/review.entity';
 import { SpecialHours } from '../entities/special-hours.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Entity()
+@Index('idx_field_location', ['latitude', 'longitude'])
+@Index('idx_field_price', ['pricePerHour'])
+@Index('idx_field_rating', ['averageRating'])
+@Index('idx_field_owner', ['ownerId'])
 export class Field {
   @PrimaryGeneratedColumn()
   id: number;
@@ -82,9 +90,23 @@ export class Field {
   @Column()
   ownerId: number;
 
+  @ManyToOne(() => User, (user) => user.fields)
+  @JoinColumn({ name: 'ownerId' })
+  owner: User;
+
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  // Método para calcular precio con comisión
+  get displayPrice(): number {
+    return Number((this.pricePerHour * 1.1).toFixed(2));
+  }
+
+  // Método para calcular solo la comisión que paga el usuario
+  get platformFeeOnly(): number {
+    return Number((this.pricePerHour * 0.1).toFixed(2));
+  }
 }

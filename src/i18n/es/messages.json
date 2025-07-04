@@ -1,0 +1,68 @@
+{
+  "errors": {
+    "fieldNotFound": "Cancha no encontrada",
+    "userNotFound": "Usuario no encontrado",
+    "bookingNotFound": "Reserva con ID {id} no encontrada",
+    "unavailableTimeSlot": "Este horario no está disponible",
+    "outsideBusinessHours": "El horario solicitado está fuera del horario de funcionamiento",
+    "fieldClosedSpecialHours": "La cancha está cerrada este día: {reason}",
+    "cancelTooLate": "No se puede cancelar con menos de 2 horas de anticipación",
+    "duplicateReview": "Ya has enviado una reseña para esta cancha",
+    "specialHoursConflict": "Conflicto de horarios: {time1} se solapa con {time2}",
+    "specialHoursOutsideBusiness": "Los horarios especiales ({specialTime}) deben estar dentro del horario de negocio ({businessTime})",
+    "invalidTimeRange": "La hora de apertura debe ser anterior a la hora de cierre",
+    "recurrencePatternRequired": "Patrón de recurrencia requerido para reservas recurrentes",
+    "emailAlreadyExists": "El email ya está registrado",
+    "fieldDoesNotOperateThisDay": "La cancha no opera este día de la semana",
+    "mustSpecifyOpenCloseTime": "Debe especificar hora de apertura y cierre para horarios especiales"
+  },
+  "success": {
+    "bookingCreated": "Reserva creada exitosamente",
+    "recurrentBookingsCreated": "Se crearon {count} reservas recurrentes",
+    "bookingCancelled": "Reserva cancelada exitosamente",
+    "seriesCancelled": "Serie de reservas cancelada",
+    "reviewCreated": "Reseña creada exitosamente",
+    "fieldCreated": "Cancha creada exitosamente",
+    "specialHoursCreated": "Horarios especiales creados",
+    "userCreated": "Usuario creado exitosamente"
+  },
+  "field": {
+    "pricePerHour": "Precio por hora",
+    "displayPrice": "Precio mostrado (incluye comisión 10%)",
+    "platformFee": "Comisión de plataforma",
+    "basePrice": "Precio base",
+    "userPayment": "Pago del usuario",
+    "surface": {
+      "natural": "Césped natural",
+      "synthetic": "Césped sintético",
+      "concrete": "Cemento"
+    },
+    "amenities": {
+      "parking": "Estacionamiento",
+      "bathroom": "Baños",
+      "changing_rooms": "Vestuarios",
+      "cafe": "Cafetería",
+      "security": "Seguridad",
+      "grill": "Parrilla"
+    }
+  },
+  "booking": {
+    "status": {
+      "pending": "Pendiente",
+      "confirmed": "Confirmada",
+      "cancelled": "Cancelada"
+    },
+    "recurrence": {
+      "daily": "Diario",
+      "weekly": "Semanal",
+      "monthly": "Mensual"
+    }
+  },
+  "user": {
+    "roles": {
+      "player": "Jugador",
+      "field_owner": "Propietario de cancha",
+      "admin": "Administrador"
+    }
+  }
+}

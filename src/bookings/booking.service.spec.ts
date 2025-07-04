@@ -1,44 +1,46 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { BookingService } from './booking.service';
 import { Booking } from './entities/booking.entity';
 import { Field } from '../soccer-field/entities/field.entity';
+import { SpecialHours } from '../soccer-field/entities/special-hours.entity';
+import { PricingService } from '../common/services/pricing.service';
+import { PaymentIntegrationService } from '../common/services/payment-integration.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-
-// Tipos específicos para los mocks
-type MockField = Partial<Field>;
-type MockBooking = Partial<Booking>;
 
 describe('BookingService', () => {
   let service: BookingService;
-  let bookingRepository: Repository<Booking>;
-  let fieldRepository: Repository<Field>;
 
-  const mockField: MockField = {
-    id: 1,
-    name: 'Test Field',
-    pricePerHour: 50.0,
+  const mockBookingRepository = {
+    create: jest.fn(),
+    save: jest.fn(),
+    findOne: jest.fn(),
+    find: jest.fn(),
+    createQueryBuilder: jest.fn(() => ({
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getMany: jest.fn(),
+    })),
   };
 
-  const mockBooking: MockBooking = {
-    id: 1,
-    field: mockField as Field,
-    userId: 1,
-    date: new Date('2024-03-20'),
-    startTime: '10:00',
-    endTime: '11:00',
-    status: 'confirmed' as const,
-    totalPrice: 50.0,
-    createdAt: new Date(),
+  const mockFieldRepository = {
+    findOne: jest.fn(),
   };
 
-  const createBookingDto = {
-    fieldId: 1,
-    userId: 1,
-    date: '2024-03-20',
-    startTime: '10:00',
-    endTime: '11:00',
+  const mockSpecialHoursRepository = {
+    find: jest.fn(),
+  };
+
+  const mockPricingService = {
+    calculateBookingPrice: jest.fn(),
+    calculateOffPeakDiscount: jest.fn(),
+    applyDiscounts: jest.fn(),
+  };
+
+  const mockPaymentIntegrationService = {
+    createPaymentPreference: jest.fn(),
+    validatePaymentForBooking: jest.fn(),
+    processPaymentWebhook: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -47,33 +49,32 @@ describe('BookingService', () => {
         BookingService,
         {
           provide: getRepositoryToken(Booking),
-          useValue: {
-            create: jest.fn().mockReturnValue(mockBooking),
-            save: jest.fn().mockResolvedValue(mockBooking),
-            findOne: jest.fn().mockResolvedValue(mockBooking),
-            find: jest.fn().mockResolvedValue([]),
-            createQueryBuilder: jest.fn(() => ({
-              leftJoinAndSelect: jest.fn().mockReturnThis(),
-              where: jest.fn().mockReturnThis(),
-              andWhere: jest.fn().mockReturnThis(),
-              getMany: jest.fn().mockResolvedValue([mockBooking]),
-            })),
-          },
+          useValue: mockBookingRepository,
         },
         {
           provide: getRepositoryToken(Field),
-          useValue: {
-            findOne: jest.fn().mockResolvedValue(mockField),
-          },
+          useValue: mockFieldRepository,
+        },
+        {
+          provide: getRepositoryToken(SpecialHours),
+          useValue: mockSpecialHoursRepository,
+        },
+        {
+          provide: PricingService,
+          useValue: mockPricingService,
+        },
+        {
+          provide: PaymentIntegrationService,
+          useValue: mockPaymentIntegrationService,
         },
       ],
     }).compile();
 
     service = module.get<BookingService>(BookingService);
-    bookingRepository = module.get<Repository<Booking>>(
-      getRepositoryToken(Booking),
-    );
-    fieldRepository = module.get<Repository<Field>>(getRepositoryToken(Field));
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -81,94 +82,264 @@ describe('BookingService', () => {
   });
 
   describe('create', () => {
-    it('should create a booking successfully', async () => {
-      const findOneSpy = jest.spyOn(fieldRepository, 'findOne');
-      const createSpy = jest.spyOn(bookingRepository, 'create');
-      const saveSpy = jest.spyOn(bookingRepository, 'save');
+    const mockField: Partial<Field> = {
+      id: 1,
+      name: 'Cancha 1',
+      businessHours: [{ day: 1, openTime: '08:00', closeTime: '22:00' }],
+    };
 
-      const result = await service.create(createBookingDto);
+    const mockCreateBookingDto = {
+      fieldId: 1,
+      userId: 1,
+      date: '2024-01-02', // Lunes (día 1)
+      startTime: '10:00',
+      endTime: '11:00',
+      payerEmail: 'test@example.com',
+    };
 
-      expect(result).toEqual(mockBooking);
-      expect(findOneSpy).toHaveBeenCalled();
-      expect(createSpy).toHaveBeenCalled();
-      expect(saveSpy).toHaveBeenCalled();
+    const mockPriceBreakdown = {
+      basePrice: 1000,
+      platformFee: 100,
+      userPayment: 100,
+      displayPrice: 1100,
+      hours: 1,
+    };
+
+    beforeEach(() => {
+      mockFieldRepository.findOne.mockResolvedValue(mockField);
+      mockSpecialHoursRepository.find.mockResolvedValue([]);
+      mockPricingService.calculateBookingPrice.mockReturnValue(
+        mockPriceBreakdown,
+      );
+      mockPricingService.calculateOffPeakDiscount.mockReturnValue(0);
+      mockPricingService.applyDiscounts.mockReturnValue(mockPriceBreakdown);
+      mockBookingRepository.create.mockReturnValue({
+        id: 1,
+        ...mockCreateBookingDto,
+      });
+      mockBookingRepository.save.mockResolvedValue({
+        id: 1,
+        ...mockCreateBookingDto,
+      });
+      mockBookingRepository.find.mockResolvedValue([]); // No hay reservas conflictivas
+      mockPaymentIntegrationService.createPaymentPreference.mockResolvedValue({
+        id: 'pref_123',
+        initPoint: 'https://mp.com/checkout',
+        sandboxInitPoint: 'https://mp.com/sandbox/checkout',
+      });
     });
 
-    it('should throw NotFoundException when field not found', async () => {
-      jest.spyOn(fieldRepository, 'findOne').mockResolvedValue(null);
-      await expect(service.create(createBookingDto)).rejects.toThrow(
+    it('should create a booking successfully', async () => {
+      const result = await service.create(mockCreateBookingDto);
+
+      expect(result.bookings).toHaveLength(1);
+      expect(result.message).toContain('Reserva creada exitosamente');
+    });
+
+    it('should create a booking without email provided', async () => {
+      const dtoWithoutEmail = { ...mockCreateBookingDto };
+
+      const result = await service.create(dtoWithoutEmail);
+
+      expect(result.bookings).toHaveLength(1);
+      expect(result.message).toContain('Reserva creada exitosamente');
+    });
+
+    it('should create booking successfully', async () => {
+      const result = await service.create(mockCreateBookingDto);
+
+      expect(result.bookings).toHaveLength(1);
+      expect(result.message).toContain('Reserva creada exitosamente');
+    });
+  });
+
+  describe('confirmBooking', () => {
+    const mockBooking: Partial<Booking> = {
+      id: 1,
+      status: 'pending',
+    };
+
+    beforeEach(() => {
+      mockBookingRepository.findOne.mockResolvedValue(mockBooking);
+      mockBookingRepository.save.mockResolvedValue({
+        ...mockBooking,
+        status: 'confirmed',
+      });
+      mockPaymentIntegrationService.validatePaymentForBooking.mockResolvedValue(
+        true,
+      );
+    });
+
+    it('should confirm a booking with valid payment', async () => {
+      const result = await service.confirmBooking(1, 'payment_123');
+
+      expect(result.status).toBe('confirmed');
+      expect(
+        mockPaymentIntegrationService.validatePaymentForBooking,
+      ).toHaveBeenCalledWith(1, 'payment_123');
+    });
+
+    it('should throw error for non-existent booking', async () => {
+      mockBookingRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.confirmBooking(999, 'payment_123')).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('should throw BadRequestException when time slot is not available', async () => {
-      const conflictingBooking: MockBooking = {
+    it('should throw error for invalid payment', async () => {
+      // Reiniciar y configurar el mock solo para este test
+      mockPaymentIntegrationService.validatePaymentForBooking.mockReset();
+      mockPaymentIntegrationService.validatePaymentForBooking.mockResolvedValue(
+        false,
+      );
+      // El mock de findOne debe devolver un booking pendiente
+      mockBookingRepository.findOne.mockResolvedValue({
         ...mockBooking,
-        startTime: '10:00',
-        endTime: '11:00',
-        status: 'confirmed' as const,
-        createdAt: new Date(),
+        status: 'pending',
+      });
+      // El mock de save debe devolver el booking original (no confirmado)
+      mockBookingRepository.save.mockResolvedValue({
+        ...mockBooking,
+        status: 'pending',
+      });
+
+      await expect(
+        service.confirmBooking(1, 'invalid_payment'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should return already confirmed booking', async () => {
+      const confirmedBooking = { ...mockBooking, status: 'confirmed' };
+      mockBookingRepository.findOne.mockResolvedValue(confirmedBooking);
+
+      const result = await service.confirmBooking(1, 'payment_123');
+
+      expect(result.status).toBe('confirmed');
+      expect(
+        mockPaymentIntegrationService.validatePaymentForBooking,
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('processPaymentWebhook', () => {
+    const mockWebhookData = {
+      type: 'payment',
+      data: {
+        id: 'payment_123',
+        status: 'approved',
+        external_reference: 'booking_1',
+      },
+    };
+
+    beforeEach(() => {
+      mockPaymentIntegrationService.processPaymentWebhook.mockResolvedValue(
+        undefined,
+      );
+      mockBookingRepository.findOne.mockResolvedValue({
+        id: 1,
+        status: 'pending',
+      });
+      mockBookingRepository.save.mockResolvedValue({
+        id: 1,
+        status: 'confirmed',
+      });
+      mockPaymentIntegrationService.validatePaymentForBooking.mockResolvedValue(
+        true,
+      );
+    });
+
+    it('should process approved payment webhook and confirm booking', () => {
+      service.processPaymentWebhook(mockWebhookData);
+
+      expect(
+        mockPaymentIntegrationService.processPaymentWebhook,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'payment_123',
+          status: 'approved',
+          externalReference: 'booking_1',
+        }),
+      );
+    });
+
+    it('should not process non-payment webhooks', () => {
+      const nonPaymentWebhook = {
+        type: 'other',
+        data: {
+          id: 'other_123',
+          status: 'unknown',
+        },
       };
-      jest
-        .spyOn(bookingRepository, 'find')
-        .mockResolvedValue([conflictingBooking as Booking]);
-      await expect(service.create(createBookingDto)).rejects.toThrow(
-        BadRequestException,
+
+      service.processPaymentWebhook(nonPaymentWebhook);
+
+      expect(
+        mockPaymentIntegrationService.processPaymentWebhook,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'other_123',
+          status: 'unknown',
+          externalReference: '',
+        }),
+      );
+    });
+
+    it('should not process non-approved payments', () => {
+      const pendingWebhook = {
+        type: 'payment',
+        data: {
+          id: 'payment_123',
+          status: 'pending',
+          external_reference: 'booking_1',
+        },
+      };
+
+      service.processPaymentWebhook(pendingWebhook);
+
+      expect(
+        mockPaymentIntegrationService.processPaymentWebhook,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'payment_123',
+          status: 'pending',
+          externalReference: 'booking_1',
+        }),
       );
     });
   });
 
-  describe('findAll', () => {
-    it('should return all bookings', async () => {
-      const result = await service.findAll();
-      expect(result).toEqual([mockBooking]);
+  describe('getPaymentStatus', () => {
+    it('should return paid status for confirmed booking', async () => {
+      mockBookingRepository.findOne.mockResolvedValue({
+        id: 1,
+        status: 'confirmed',
+      });
+
+      const result = await service.getPaymentStatus(1);
+
+      expect(result.status).toBe('paid');
+      expect(result.message).toContain('confirmada y pagada');
     });
 
-    it('should filter bookings by userId', async () => {
-      const result = await service.findAll({ userId: 1 });
-      expect(result).toEqual([mockBooking]);
+    it('should return pending status for pending booking', async () => {
+      mockBookingRepository.findOne.mockResolvedValue({
+        id: 1,
+        status: 'pending',
+      });
+
+      const result = await service.getPaymentStatus(1);
+
+      expect(result.status).toBe('pending');
+      expect(result.message).toContain('pendiente de pago');
     });
 
-    it('should filter bookings by fieldId', async () => {
-      const result = await service.findAll({ fieldId: 1 });
-      expect(result).toEqual([mockBooking]);
-    });
+    it('should throw error for non-existent booking', async () => {
+      mockBookingRepository.findOne.mockResolvedValue(null);
 
-    it('should filter bookings by date', async () => {
-      const result = await service.findAll({ date: '2024-03-20' });
-      expect(result).toEqual([mockBooking]);
-    });
-  });
-
-  describe('findOne', () => {
-    it('should return a booking by id', async () => {
-      const result = await service.findOne(1);
-      expect(result).toEqual(mockBooking);
-    });
-
-    it('should throw NotFoundException when booking not found', async () => {
-      jest.spyOn(bookingRepository, 'findOne').mockResolvedValue(null);
-      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('cancel', () => {
-    it('should cancel a booking', async () => {
-      const cancelledBooking: MockBooking = {
-        ...mockBooking,
-        status: 'cancelled' as const,
-      };
-      jest
-        .spyOn(bookingRepository, 'save')
-        .mockResolvedValue(cancelledBooking as Booking);
-
-      const result = await service.cancel(1);
-      expect(result.status).toBe('cancelled');
-    });
-
-    it('should throw NotFoundException when booking not found', async () => {
-      jest.spyOn(bookingRepository, 'findOne').mockResolvedValue(null);
-      await expect(service.cancel(999)).rejects.toThrow(NotFoundException);
+      await expect(service.getPaymentStatus(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

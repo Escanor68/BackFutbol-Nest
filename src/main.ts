@@ -61,4 +61,4 @@ async function bootstrap() {
   console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
 }
 
-bootstrap();
+void bootstrap();
